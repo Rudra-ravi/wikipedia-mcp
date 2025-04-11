@@ -19,7 +19,7 @@ class WikipediaClient:
             language: The language code for Wikipedia (default: "en" for English).
         """
         self.language = language
-        self.user_agent = "WikipediaMCPServer/0.1.0 (https://github.com/yourusername/wikipedia-mcp)"
+        self.user_agent = "WikipediaMCPServer/0.1.0 (https://github.com/rudra-ravi/wikipedia-mcp.git)"
         self.wiki = wikipediaapi.Wikipedia(
             user_agent=self.user_agent,
             language=language,

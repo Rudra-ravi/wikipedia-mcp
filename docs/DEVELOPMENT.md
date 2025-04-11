@@ -105,6 +105,17 @@ python setup.py sdist bdist_wheel
 twine upload dist/*
 ```
 
+## Release Workflow
+
+The release process is automated using GitHub Actions. Follow these steps to create a new release:
+
+1. Update the version in `setup.py`.
+2. Commit the changes and push to the `main` branch.
+3. Create a new release on GitHub with the updated version tag.
+4. The GitHub Actions workflow will automatically build and upload the package to PyPI.
+
+Author: [Ravikumar E](https://github.com/rudra-ravi/wikipedia-mcp.git)
+
 ## Environment Variables
 
 The following environment variables can be set in a `.env` file:
