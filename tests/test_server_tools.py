@@ -452,10 +452,14 @@ class TestIntegration:
     def test_client_initialization(self):
         """Test that client can be initialized with different languages."""
         client_en = WikipediaClient("en")
-        assert client_en.language == "en"
+        assert client_en.original_language == "en"
+        assert client_en.base_language == "en"
+        assert client_en.language_variant is None
         
         client_es = WikipediaClient("es")
-        assert client_es.language == "es"
+        assert client_es.original_language == "es"
+        assert client_es.base_language == "es"
+        assert client_es.language_variant is None
 
     @pytest.mark.integration
     def test_real_wikipedia_search(self):

@@ -13,22 +13,49 @@ logger = logging.getLogger(__name__)
 class WikipediaClient:
     """Client for interacting with the Wikipedia API."""
 
+    # Language variant mappings - maps variant codes to their base language
+    LANGUAGE_VARIANTS = {
+        'zh-hans': 'zh',  # Simplified Chinese
+        'zh-hant': 'zh',  # Traditional Chinese
+        'zh-tw': 'zh',    # Traditional Chinese (Taiwan)
+        'zh-hk': 'zh',    # Traditional Chinese (Hong Kong)
+        'zh-mo': 'zh',    # Traditional Chinese (Macau)
+        'zh-cn': 'zh',    # Simplified Chinese (China)
+        'zh-sg': 'zh',    # Simplified Chinese (Singapore)
+        'zh-my': 'zh',    # Simplified Chinese (Malaysia)
+        # Add more language variants as needed
+        # Serbian variants
+        'sr-latn': 'sr',  # Serbian Latin
+        'sr-cyrl': 'sr',  # Serbian Cyrillic
+        # Norwegian variants
+        'no': 'nb',       # Norwegian Bokmål (default)
+        # Kurdish variants  
+        'ku-latn': 'ku',  # Kurdish Latin
+        'ku-arab': 'ku',  # Kurdish Arabic
+    }
+
     def __init__(self, language: str = "en", enable_cache: bool = False):
         """Initialize the Wikipedia client.
         
         Args:
             language: The language code for Wikipedia (default: "en" for English).
+                     Supports language variants like 'zh-hans', 'zh-tw', etc.
             enable_cache: Whether to enable caching for API calls (default: False).
         """
-        self.language = language
+        self.original_language = language
         self.enable_cache = enable_cache
         self.user_agent = "WikipediaMCPServer/0.1.0 (https://github.com/rudra-ravi/wikipedia-mcp)"
+        
+        # Parse language and variant
+        self.base_language, self.language_variant = self._parse_language_variant(language)
+        
+        # Use base language for API and library initialization
         self.wiki = wikipediaapi.Wikipedia(
             user_agent=self.user_agent,
-            language=language,
+            language=self.base_language,
             extract_format=wikipediaapi.ExtractFormat.WIKI
         )
-        self.api_url = f"https://{language}.wikipedia.org/w/api.php"
+        self.api_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
         
         if self.enable_cache:
             self.search = functools.lru_cache(maxsize=128)(self.search)
@@ -40,6 +67,35 @@ class WikipediaClient:
             self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
             self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
+
+    def _parse_language_variant(self, language: str) -> tuple[str, Optional[str]]:
+        """Parse language code and extract base language and variant.
+        
+        Args:
+            language: The language code, possibly with variant (e.g., 'zh-hans', 'zh-tw').
+            
+        Returns:
+            A tuple of (base_language, variant) where variant is None if not a variant.
+        """
+        if language in self.LANGUAGE_VARIANTS:
+            base_language = self.LANGUAGE_VARIANTS[language]
+            return base_language, language
+        else:
+            return language, None
+    
+    def _add_variant_to_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Add language variant parameter to API request parameters if needed.
+        
+        Args:
+            params: The API request parameters.
+            
+        Returns:
+            Updated parameters with variant if applicable.
+        """
+        if self.language_variant:
+            params = params.copy()
+            params['variant'] = self.language_variant
+        return params
 
     def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search Wikipedia for articles matching a query.
@@ -59,6 +115,9 @@ class WikipediaClient:
             'srsearch': query,
             'srlimit': limit
         }
+        
+        # Add variant parameter if needed
+        params = self._add_variant_to_params(params)
         
         try:
             response = requests.get(self.api_url, params=params)
