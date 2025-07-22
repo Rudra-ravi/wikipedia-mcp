@@ -265,7 +265,7 @@ class WikipediaClient:
         
         return result
 
-    def summarize_for_query(self, title: str, query: str, max_length: Optional[int] = 250) -> str:
+    def summarize_for_query(self, title: str, query: str, max_length: int = 250) -> str:
         """
         Get a summary of a Wikipedia article tailored to a specific query.
         This is a simplified implementation that returns a snippet around the query.
@@ -311,7 +311,7 @@ class WikipediaClient:
             logger.error(f"Error generating query-focused summary for '{title}': {e}")
             return f"Error generating query-focused summary for '{title}': {str(e)}"
 
-    def summarize_section(self, title: str, section_title: str, max_length: Optional[int] = 150) -> str:
+    def summarize_section(self, title: str, section_title: str, max_length: int = 150) -> str:
         """
         Get a summary of a specific section of a Wikipedia article.
         
