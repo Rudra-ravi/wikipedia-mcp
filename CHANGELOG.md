@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Google ADK Compatibility**: Fixed compatibility with Google ADK agents by removing `anyOf` schemas from optional parameters that were incompatible with Google's function calling API. Changed parameter type declarations to generate clean, simple schemas while maintaining backward compatibility.
+  - `summarize_article_for_query.max_length`: `Optional[int] = 250` → `int = 250`
+  - `summarize_article_section.max_length`: `Optional[int] = 150` → `int = 150`
+  - `extract_key_facts.topic_within_article`: `Optional[str] = None` → `str = ""` (with automatic conversion)
+
+### Added
+- **Google ADK Compatibility Tests**: Added comprehensive tests to ensure all tool schemas remain compatible with Google ADK agents.
+
 ## [1.5.4] - 2025-07-15
 
 ### Added

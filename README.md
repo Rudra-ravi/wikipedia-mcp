@@ -28,6 +28,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Related Topics**: Discover topics related to a specific article
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
+- **Google ADK Compatibility**: Fully compatible with Google ADK agents and other AI frameworks that use strict function calling schemas
 
 ## Installation
 
