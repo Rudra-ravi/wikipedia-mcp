@@ -27,6 +27,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Link Discovery**: Find links within articles to related topics
 - **Related Topics**: Discover topics related to a specific article
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
+- **Language Variant Support**: Support for language variants such as Chinese traditional/simplified (e.g., `zh-hans` for Simplified Chinese, `zh-tw` for Traditional Chinese), Serbian scripts (`sr-latn`, `sr-cyrl`), and other regional variants.
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
 
 ## Installation
@@ -109,7 +110,10 @@ wikipedia-mcp --transport stdio  # For Claude Desktop
 wikipedia-mcp --transport sse    # For HTTP streaming
 
 # Specify language (default: en for English)
-# wikipedia-mcp --language ja  # Example for Japanese
+wikipedia-mcp --language ja  # Example for Japanese
+wikipedia-mcp --language zh-hans  # Example for Simplified Chinese
+wikipedia-mcp --language zh-tw    # Example for Traditional Chinese (Taiwan)
+wikipedia-mcp --language sr-latn  # Example for Serbian Latin script
 
 # Optional: Specify port for SSE (default 8000)
 wikipedia-mcp --transport sse --port 8080
@@ -254,6 +258,59 @@ Extract key facts from a Wikipedia article, optionally focused on a specific top
 
 **Returns:**
 - A dictionary containing the title, topic, and a list of extracted facts
+
+## Language Variants
+
+The Wikipedia MCP server supports language variants for languages that have multiple writing systems or regional variations. This feature is particularly useful for Chinese, Serbian, Kurdish, and other languages with multiple scripts or regional differences.
+
+### Supported Language Variants
+
+#### Chinese Language Variants
+- `zh-hans` - Simplified Chinese
+- `zh-hant` - Traditional Chinese  
+- `zh-tw` - Traditional Chinese (Taiwan)
+- `zh-hk` - Traditional Chinese (Hong Kong)
+- `zh-mo` - Traditional Chinese (Macau)
+- `zh-cn` - Simplified Chinese (China)
+- `zh-sg` - Simplified Chinese (Singapore)
+- `zh-my` - Simplified Chinese (Malaysia)
+
+#### Serbian Language Variants
+- `sr-latn` - Serbian Latin script
+- `sr-cyrl` - Serbian Cyrillic script
+
+#### Kurdish Language Variants
+- `ku-latn` - Kurdish Latin script
+- `ku-arab` - Kurdish Arabic script
+
+#### Norwegian Language Variants
+- `no` - Norwegian (automatically mapped to Bokmål)
+
+### Usage Examples
+
+```bash
+# Access Simplified Chinese Wikipedia
+wikipedia-mcp --language zh-hans
+
+# Access Traditional Chinese Wikipedia (Taiwan)
+wikipedia-mcp --language zh-tw
+
+# Access Serbian Wikipedia in Latin script
+wikipedia-mcp --language sr-latn
+
+# Access Serbian Wikipedia in Cyrillic script
+wikipedia-mcp --language sr-cyrl
+```
+
+### How Language Variants Work
+
+When you specify a language variant like `zh-hans`, the server:
+1. Maps the variant to the base Wikipedia language (e.g., `zh` for Chinese variants)
+2. Uses the base language for API connections to the Wikipedia servers
+3. Includes the variant parameter in API requests to get content in the specific variant
+4. Returns content formatted according to the specified variant's conventions
+
+This approach ensures optimal compatibility with Wikipedia's API while providing access to variant-specific content and formatting.
 
 ## Example Prompts
 
