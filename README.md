@@ -27,6 +27,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Link Discovery**: Find links within articles to related topics
 - **Related Topics**: Discover topics related to a specific article
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
+- **Country/Locale Support**: Use intuitive country codes like `--country US`, `--country China`, or `--country TW` instead of language codes. Automatically maps to appropriate Wikipedia language variants.
 - **Language Variant Support**: Support for language variants such as Chinese traditional/simplified (e.g., `zh-hans` for Simplified Chinese, `zh-tw` for Traditional Chinese), Serbian scripts (`sr-latn`, `sr-cyrl`), and other regional variants.
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
 - **Google ADK Compatibility**: Fully compatible with Google ADK agents and other AI frameworks that use strict function calling schemas
@@ -116,11 +117,25 @@ wikipedia-mcp --language zh-hans  # Example for Simplified Chinese
 wikipedia-mcp --language zh-tw    # Example for Traditional Chinese (Taiwan)
 wikipedia-mcp --language sr-latn  # Example for Serbian Latin script
 
+# Specify country/locale (alternative to language codes)
+wikipedia-mcp --country US        # English (United States)
+wikipedia-mcp --country China     # Chinese Simplified
+wikipedia-mcp --country Taiwan    # Chinese Traditional (Taiwan)  
+wikipedia-mcp --country Japan     # Japanese
+wikipedia-mcp --country Germany   # German
+wikipedia-mcp --country france    # French (case insensitive)
+
+# List all supported countries
+wikipedia-mcp --list-countries
+
 # Optional: Specify port for SSE (default 8000)
 wikipedia-mcp --transport sse --port 8080
 
 # Optional: Enable caching
 wikipedia-mcp --enable-cache
+
+# Combine options
+wikipedia-mcp --country Taiwan --enable-cache --transport sse --port 8080
 ```
 
 ### Configuration for Claude Desktop
@@ -144,6 +159,26 @@ Add the following to your Claude Desktop configuration file:
   "mcpServers": {
     "wikipedia": {
       "command": "/full/path/to/wikipedia-mcp"
+    }
+  }
+}
+```
+
+**Option 3: With country/language specification**
+```json
+{
+  "mcpServers": {
+    "wikipedia-us": {
+      "command": "wikipedia-mcp",
+      "args": ["--country", "US"]
+    },
+    "wikipedia-taiwan": {
+      "command": "wikipedia-mcp", 
+      "args": ["--country", "TW"]
+    },
+    "wikipedia-japan": {
+      "command": "wikipedia-mcp",
+      "args": ["--country", "Japan"]
     }
   }
 }
@@ -260,6 +295,89 @@ Extract key facts from a Wikipedia article, optionally focused on a specific top
 **Returns:**
 - A dictionary containing the title, topic, and a list of extracted facts
 
+## Country/Locale Support
+
+The Wikipedia MCP server supports intuitive country and region codes as an alternative to language codes. This makes it easier to access region-specific Wikipedia content without needing to know language codes.
+
+### Supported Countries and Regions
+
+Use `--list-countries` to see all supported countries:
+
+```bash
+wikipedia-mcp --list-countries
+```
+
+This will display countries organized by language, for example:
+
+```
+Supported Country/Locale Codes:
+========================================
+    en: US, USA, United States, UK, GB, Canada, Australia, ...
+    zh-hans: CN, China
+    zh-tw: TW, Taiwan  
+    ja: JP, Japan
+    de: DE, Germany
+    fr: FR, France
+    es: ES, Spain, MX, Mexico, AR, Argentina, ...
+    pt: PT, Portugal, BR, Brazil
+    ru: RU, Russia
+    ar: SA, Saudi Arabia, AE, UAE, EG, Egypt, ...
+```
+
+### Usage Examples
+
+```bash
+# Major countries by code
+wikipedia-mcp --country US       # United States (English)
+wikipedia-mcp --country CN       # China (Simplified Chinese)
+wikipedia-mcp --country TW       # Taiwan (Traditional Chinese)
+wikipedia-mcp --country JP       # Japan (Japanese)
+wikipedia-mcp --country DE       # Germany (German)
+wikipedia-mcp --country FR       # France (French)
+wikipedia-mcp --country BR       # Brazil (Portuguese)
+wikipedia-mcp --country RU       # Russia (Russian)
+
+# Countries by full name (case insensitive)
+wikipedia-mcp --country "United States"
+wikipedia-mcp --country China
+wikipedia-mcp --country Taiwan  
+wikipedia-mcp --country Japan
+wikipedia-mcp --country Germany
+wikipedia-mcp --country france    # Case insensitive
+
+# Regional variants
+wikipedia-mcp --country HK       # Hong Kong (Traditional Chinese)
+wikipedia-mcp --country SG       # Singapore (Simplified Chinese)
+wikipedia-mcp --country "Saudi Arabia"  # Arabic
+wikipedia-mcp --country Mexico   # Spanish
+```
+
+### Country-to-Language Mapping
+
+The server automatically maps country codes to appropriate Wikipedia language editions:
+
+- **English-speaking**: US, UK, Canada, Australia, New Zealand, Ireland, South Africa → `en`
+- **Chinese regions**: 
+  - CN, China → `zh-hans` (Simplified Chinese)
+  - TW, Taiwan → `zh-tw` (Traditional Chinese - Taiwan)
+  - HK, Hong Kong → `zh-hk` (Traditional Chinese - Hong Kong)
+  - SG, Singapore → `zh-sg` (Simplified Chinese - Singapore)
+- **Major languages**: JP→`ja`, DE→`de`, FR→`fr`, ES→`es`, IT→`it`, RU→`ru`, etc.
+- **Regional variants**: Supports 140+ countries and regions
+
+### Error Handling
+
+If you specify an unsupported country, you'll get a helpful error message:
+
+```bash
+$ wikipedia-mcp --country INVALID
+Error: Unsupported country/locale: 'INVALID'. 
+Supported country codes include: US, USA, UK, GB, CA, AU, NZ, IE, ZA, CN. 
+Use --language parameter for direct language codes instead.
+
+Use --list-countries to see supported country codes.
+```
+
 ## Language Variants
 
 The Wikipedia MCP server supports language variants for languages that have multiple writing systems or regional variations. This feature is particularly useful for Chinese, Serbian, Kurdish, and other languages with multiple scripts or regional differences.
@@ -317,11 +435,24 @@ This approach ensures optimal compatibility with Wikipedia's API while providing
 
 Once the server is running and configured with Claude Desktop, you can use prompts like:
 
+### General Wikipedia queries:
 - "Tell me about quantum computing using the Wikipedia information."
 - "Summarize the history of artificial intelligence based on Wikipedia."
 - "What does Wikipedia say about climate change?"
 - "Find Wikipedia articles related to machine learning."
 - "Get me the introduction section of the article on neural networks from Wikipedia."
+
+### Using country-specific Wikipedia:
+- "Search Wikipedia China for information about the Great Wall." (uses Chinese Wikipedia)
+- "Tell me about Tokyo from Japanese Wikipedia sources."
+- "What does German Wikipedia say about the Berlin Wall?"
+- "Find information about the Eiffel Tower from French Wikipedia."
+- "Get Taiwan Wikipedia's article about Taiwanese cuisine."
+
+### Language variant examples:
+- "Search Traditional Chinese Wikipedia for information about Taiwan."
+- "Find Simplified Chinese articles about modern China."
+- "Get information from Serbian Latin Wikipedia about Belgrade."
 
 ## MCP Resources
 
