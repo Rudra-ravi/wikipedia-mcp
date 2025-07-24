@@ -34,20 +34,158 @@ class WikipediaClient:
         'ku-arab': 'ku',  # Kurdish Arabic
     }
 
-    def __init__(self, language: str = "en", enable_cache: bool = False):
+    # Country/locale to language code mappings
+    COUNTRY_TO_LANGUAGE = {
+        # English-speaking countries
+        'US': 'en', 'USA': 'en', 'United States': 'en',
+        'UK': 'en', 'GB': 'en', 'United Kingdom': 'en',
+        'CA': 'en', 'Canada': 'en',
+        'AU': 'en', 'Australia': 'en',
+        'NZ': 'en', 'New Zealand': 'en',
+        'IE': 'en', 'Ireland': 'en',
+        'ZA': 'en', 'South Africa': 'en',
+        
+        # Chinese-speaking countries/regions
+        'CN': 'zh-hans', 'China': 'zh-hans',
+        'TW': 'zh-tw', 'Taiwan': 'zh-tw',
+        'HK': 'zh-hk', 'Hong Kong': 'zh-hk',
+        'MO': 'zh-mo', 'Macau': 'zh-mo',
+        'SG': 'zh-sg', 'Singapore': 'zh-sg',
+        'MY': 'zh-my', 'Malaysia': 'zh-my',
+        
+        # Major European countries
+        'DE': 'de', 'Germany': 'de',
+        'FR': 'fr', 'France': 'fr',
+        'ES': 'es', 'Spain': 'es',
+        'IT': 'it', 'Italy': 'it',
+        'PT': 'pt', 'Portugal': 'pt',
+        'NL': 'nl', 'Netherlands': 'nl',
+        'PL': 'pl', 'Poland': 'pl',
+        'RU': 'ru', 'Russia': 'ru',
+        'UA': 'uk', 'Ukraine': 'uk',
+        'TR': 'tr', 'Turkey': 'tr',
+        'GR': 'el', 'Greece': 'el',
+        'SE': 'sv', 'Sweden': 'sv',
+        'NO': 'no', 'Norway': 'no',
+        'DK': 'da', 'Denmark': 'da',
+        'FI': 'fi', 'Finland': 'fi',
+        'IS': 'is', 'Iceland': 'is',
+        'CZ': 'cs', 'Czech Republic': 'cs',
+        'SK': 'sk', 'Slovakia': 'sk',
+        'HU': 'hu', 'Hungary': 'hu',
+        'RO': 'ro', 'Romania': 'ro',
+        'BG': 'bg', 'Bulgaria': 'bg',
+        'HR': 'hr', 'Croatia': 'hr',
+        'SI': 'sl', 'Slovenia': 'sl',
+        'RS': 'sr', 'Serbia': 'sr',
+        'BA': 'bs', 'Bosnia and Herzegovina': 'bs',
+        'MK': 'mk', 'Macedonia': 'mk',
+        'AL': 'sq', 'Albania': 'sq',
+        'MT': 'mt', 'Malta': 'mt',
+        
+        # Asian countries
+        'JP': 'ja', 'Japan': 'ja',
+        'KR': 'ko', 'South Korea': 'ko',
+        'IN': 'hi', 'India': 'hi',
+        'TH': 'th', 'Thailand': 'th',
+        'VN': 'vi', 'Vietnam': 'vi',
+        'ID': 'id', 'Indonesia': 'id',
+        'PH': 'tl', 'Philippines': 'tl',
+        'BD': 'bn', 'Bangladesh': 'bn',
+        'PK': 'ur', 'Pakistan': 'ur',
+        'LK': 'si', 'Sri Lanka': 'si',
+        'MM': 'my', 'Myanmar': 'my',
+        'KH': 'km', 'Cambodia': 'km',
+        'LA': 'lo', 'Laos': 'lo',
+        'MN': 'mn', 'Mongolia': 'mn',
+        'KZ': 'kk', 'Kazakhstan': 'kk',
+        'UZ': 'uz', 'Uzbekistan': 'uz',
+        'AF': 'fa', 'Afghanistan': 'fa',
+        
+        # Middle Eastern countries
+        'IR': 'fa', 'Iran': 'fa',
+        'SA': 'ar', 'Saudi Arabia': 'ar',
+        'AE': 'ar', 'UAE': 'ar',
+        'EG': 'ar', 'Egypt': 'ar',
+        'IQ': 'ar', 'Iraq': 'ar',
+        'SY': 'ar', 'Syria': 'ar',
+        'JO': 'ar', 'Jordan': 'ar',
+        'LB': 'ar', 'Lebanon': 'ar',
+        'IL': 'he', 'Israel': 'he',
+        
+        # African countries
+        'MA': 'ar', 'Morocco': 'ar',
+        'DZ': 'ar', 'Algeria': 'ar',
+        'TN': 'ar', 'Tunisia': 'ar',
+        'LY': 'ar', 'Libya': 'ar',
+        'SD': 'ar', 'Sudan': 'ar',
+        'ET': 'am', 'Ethiopia': 'am',
+        'KE': 'sw', 'Kenya': 'sw',
+        'TZ': 'sw', 'Tanzania': 'sw',
+        'NG': 'ha', 'Nigeria': 'ha',
+        'GH': 'en', 'Ghana': 'en',
+        
+        # Latin American countries
+        'MX': 'es', 'Mexico': 'es',
+        'AR': 'es', 'Argentina': 'es',
+        'CO': 'es', 'Colombia': 'es',
+        'VE': 'es', 'Venezuela': 'es',
+        'PE': 'es', 'Peru': 'es',
+        'CL': 'es', 'Chile': 'es',
+        'EC': 'es', 'Ecuador': 'es',
+        'BO': 'es', 'Bolivia': 'es',
+        'PY': 'es', 'Paraguay': 'es',
+        'UY': 'es', 'Uruguay': 'es',
+        'CR': 'es', 'Costa Rica': 'es',
+        'PA': 'es', 'Panama': 'es',
+        'GT': 'es', 'Guatemala': 'es',
+        'HN': 'es', 'Honduras': 'es',
+        'SV': 'es', 'El Salvador': 'es',
+        'NI': 'es', 'Nicaragua': 'es',
+        'CU': 'es', 'Cuba': 'es',
+        'DO': 'es', 'Dominican Republic': 'es',
+        'BR': 'pt', 'Brazil': 'pt',
+        
+        # Additional countries
+        'BY': 'be', 'Belarus': 'be',
+        'EE': 'et', 'Estonia': 'et',
+        'LV': 'lv', 'Latvia': 'lv',
+        'LT': 'lt', 'Lithuania': 'lt',
+        'GE': 'ka', 'Georgia': 'ka',
+        'AM': 'hy', 'Armenia': 'hy',
+        'AZ': 'az', 'Azerbaijan': 'az',
+    }
+
+    def __init__(self, language: str = "en", country: Optional[str] = None, enable_cache: bool = False):
         """Initialize the Wikipedia client.
         
         Args:
             language: The language code for Wikipedia (default: "en" for English).
                      Supports language variants like 'zh-hans', 'zh-tw', etc.
+            country: The country/locale code (e.g., 'US', 'CN', 'TW'). 
+                    If provided, overrides language parameter.
             enable_cache: Whether to enable caching for API calls (default: False).
         """
-        self.original_language = language
+        # Resolve country to language if country is provided
+        if country:
+            resolved_language = self._resolve_country_to_language(country)
+            self.original_input = country
+            self.input_type = "country"
+            self.resolved_language = resolved_language
+            # Maintain backward compatibility
+            self.original_language = resolved_language
+        else:
+            self.original_input = language
+            self.input_type = "language"
+            self.resolved_language = language
+            # Maintain backward compatibility
+            self.original_language = language
+        
         self.enable_cache = enable_cache
         self.user_agent = "WikipediaMCPServer/0.1.0 (https://github.com/rudra-ravi/wikipedia-mcp)"
         
         # Parse language and variant
-        self.base_language, self.language_variant = self._parse_language_variant(language)
+        self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
         
         # Use base language for API and library initialization
         self.wiki = wikipediaapi.Wikipedia(
@@ -67,6 +205,45 @@ class WikipediaClient:
             self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
             self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
+
+    def _resolve_country_to_language(self, country: str) -> str:
+        """Resolve country/locale code to language code.
+        
+        Args:
+            country: The country/locale code (e.g., 'US', 'CN', 'Taiwan').
+            
+        Returns:
+            The corresponding language code.
+            
+        Raises:
+            ValueError: If the country code is not supported.
+        """
+        # Normalize country code (upper case, handle common variations)
+        country_upper = country.upper().strip()
+        country_title = country.title().strip()
+        
+        # Try exact matches first
+        if country_upper in self.COUNTRY_TO_LANGUAGE:
+            return self.COUNTRY_TO_LANGUAGE[country_upper]
+        
+        # Try title case
+        if country_title in self.COUNTRY_TO_LANGUAGE:
+            return self.COUNTRY_TO_LANGUAGE[country_title]
+        
+        # Try original case
+        if country in self.COUNTRY_TO_LANGUAGE:
+            return self.COUNTRY_TO_LANGUAGE[country]
+        
+        # Provide helpful error message with suggestions
+        available_countries = list(self.COUNTRY_TO_LANGUAGE.keys())
+        # Get first 10 country codes for suggestions
+        country_codes = [c for c in available_countries if len(c) <= 3][:10]
+        
+        raise ValueError(
+            f"Unsupported country/locale: '{country}'. "
+            f"Supported country codes include: {', '.join(country_codes)}. "
+            f"Use --language parameter for direct language codes instead."
+        )
 
     def _parse_language_variant(self, language: str) -> tuple[str, Optional[str]]:
         """Parse language code and extract base language and variant.
