@@ -10,6 +10,7 @@ from unittest.mock import patch, MagicMock
 import functools
 from wikipedia_mcp.wikipedia_client import WikipediaClient
 from wikipedia_mcp.server import create_server
+import sys
 
 
 class TestPortConfiguration:
@@ -18,7 +19,7 @@ class TestPortConfiguration:
     def test_cli_port_argument(self):
         """Test that --port argument is available in CLI."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--help"],
+            [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
             timeout=10
@@ -30,7 +31,7 @@ class TestPortConfiguration:
     def test_port_default_value(self):
         """Test that port defaults to 8000."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--help"],
+            [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
             timeout=10
@@ -45,7 +46,7 @@ class TestPortConfiguration:
         try:
             # Start server in background
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--transport", "sse", "--port", str(port)],
+                [sys.executable, "-m", "wikipedia_mcp", "--transport", "sse", "--port", str(port)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True
@@ -75,7 +76,7 @@ class TestPortConfiguration:
         """Test that STDIO transport ignores port parameter."""
         # This should not raise an error
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--transport", "stdio", "--port", "9999", "--help"],
+            [sys.executable, "-m", "wikipedia_mcp", "--transport", "stdio", "--port", "9999", "--help"],
             capture_output=True,
             text=True,
             timeout=10
@@ -89,7 +90,7 @@ class TestCachingFunctionality:
     def test_cli_cache_argument(self):
         """Test that --enable-cache argument is available in CLI."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--help"],
+            [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
             timeout=10
@@ -197,7 +198,7 @@ class TestIntegrationNewFeatures:
         """Test CLI with all new options."""
         result = subprocess.run(
             [
-                "python", "-m", "wikipedia_mcp", 
+                sys.executable, "-m", "wikipedia_mcp", 
                 "--transport", "stdio",
                 "--port", "8083", 
                 "--enable-cache",

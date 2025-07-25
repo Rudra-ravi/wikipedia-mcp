@@ -8,6 +8,7 @@ import time
 import signal
 import os
 from unittest.mock import patch
+import sys
 
 
 class TestCountryCLI:
@@ -16,10 +17,9 @@ class TestCountryCLI:
     def test_cli_country_argument_help(self):
         """Test that country argument appears in help."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--help"],
+            [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
         )
         
         assert result.returncode == 0
@@ -30,10 +30,9 @@ class TestCountryCLI:
     def test_cli_list_countries_functionality(self):
         """Test the --list-countries functionality."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--list-countries"],
+            [sys.executable, "-m", "wikipedia_mcp", "--list-countries"],
             capture_output=True,
             text=True,
-            cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
         )
         
         assert result.returncode == 0
@@ -47,10 +46,9 @@ class TestCountryCLI:
     def test_cli_country_validation_error(self):
         """Test error handling for invalid country codes."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--country", "INVALID"],
+            [sys.executable, "-m", "wikipedia_mcp", "--country", "INVALID"],
             capture_output=True,
             text=True,
-            cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
         )
         
         assert result.returncode == 0  # Should exit gracefully
@@ -61,10 +59,9 @@ class TestCountryCLI:
     def test_cli_country_and_language_conflict(self):
         """Test handling of conflicting country and language arguments."""
         result = subprocess.run(
-            ["python", "-m", "wikipedia_mcp", "--language", "ja", "--country", "US"],
+            [sys.executable, "-m", "wikipedia_mcp", "--language", "ja", "--country", "US"],
             capture_output=True,
             text=True,
-            cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
         )
         
         assert result.returncode == 0  # Should exit gracefully
@@ -75,11 +72,10 @@ class TestCountryCLI:
         process = None
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--country", "JP", "--transport", "sse", "--port", "8200"],
+                [sys.executable, "-m", "wikipedia_mcp", "--country", "JP", "--transport", "sse", "--port", "8200"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start
@@ -102,11 +98,10 @@ class TestCountryCLI:
         process = None
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "-c", "FR", "--transport", "sse", "--port", "8201"],
+                [sys.executable, "-m", "wikipedia_mcp", "-c", "FR", "--transport", "sse", "--port", "8201"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start
@@ -133,11 +128,10 @@ class TestCLICountryIntegration:
         process = None
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--country", "Taiwan"],
+                [sys.executable, "-m", "wikipedia_mcp", "--country", "Taiwan"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start and log
@@ -160,11 +154,10 @@ class TestCLICountryIntegration:
         process = None
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--country", "DE", "--enable-cache", "--transport", "sse", "--port", "8202"],
+                [sys.executable, "-m", "wikipedia_mcp", "--country", "DE", "--enable-cache", "--transport", "sse", "--port", "8202"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start
@@ -187,11 +180,10 @@ class TestCLICountryIntegration:
         process = None
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--country", "IT", "--transport", "sse", "--port", "8203"],
+                [sys.executable, "-m", "wikipedia_mcp", "--country", "IT", "--transport", "sse", "--port", "8203"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start
@@ -227,11 +219,10 @@ class TestCLICountryExamples:
         port = 8210 + hash(country) % 100  # Generate unique port for each test
         try:
             process = subprocess.Popen(
-                ["python", "-m", "wikipedia_mcp", "--country", country, "--transport", "sse", "--port", str(port)],
+                [sys.executable, "-m", "wikipedia_mcp", "--country", country, "--transport", "sse", "--port", str(port)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd="/home/runner/work/wikipedia-mcp/wikipedia-mcp"
             )
             
             # Give the server time to start

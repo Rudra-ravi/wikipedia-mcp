@@ -6,7 +6,7 @@ import sys
 import pytest
 
 # Path to the wikipedia-mcp executable
-WIKIPEDIA_MCP_CMD = ["wikipedia-mcp"]
+WIKIPEDIA_MCP_CMD = [sys.executable, "-m", "wikipedia_mcp"]
 
 def run_mcp_command(args, expect_timeout=False):
     """Helper function to run the wikipedia-mcp command and return its output."""
@@ -20,22 +20,6 @@ def run_mcp_command(args, expect_timeout=False):
             stdin=subprocess.PIPE  # Explicitly pipe stdin
         )
         return process
-    except FileNotFoundError:
-        try:
-            process = subprocess.run(
-                [sys.executable, "-m", "wikipedia_mcp"] + args,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=5,  # Increased timeout
-                stdin=subprocess.PIPE  # Explicitly pipe stdin
-            )
-            return process
-        except subprocess.TimeoutExpired as e:
-            if expect_timeout:
-                return e
-            else:
-                raise
     except subprocess.TimeoutExpired as e:
         if expect_timeout:
             return e
