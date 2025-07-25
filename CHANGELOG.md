@@ -16,6 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Google ADK Compatibility Tests**: Added comprehensive tests to ensure all tool schemas remain compatible with Google ADK agents.
 
+## [1.5.5] - 2024-07-26
+
+### Added
+- **Comprehensive Country/Locale Support**: Introduced new CLI arguments `--country` (`-c`) and `--list-countries` to enable intuitive selection of Wikipedia content based on country or locale codes (e.g., `US`, `China`, `Taiwan`). The server now automatically maps these codes to appropriate Wikipedia language variants (e.g., `US` to `en`, `CN` to `zh-hans`, `TW` to `zh-tw`). This feature includes:
+  - `--country <CODE_OR_NAME>`: Specifies the country/locale for Wikipedia content. Supports both ISO 3166-1 alpha-2 codes (e.g., `JP`, `DE`) and full country names (e.g., `Japan`, `Germany`), with case-insensitive matching for full names.
+  - `--list-countries`: Displays a comprehensive list of all supported country/locale codes and their mapped Wikipedia languages, along with usage examples.
+- **Extensive Testing**: Added a new test module `tests/test_cli_country.py` with comprehensive unit and integration tests for all country/locale functionalities, including:
+  - Validation of CLI arguments and help messages.
+  - Verification of country-to-language resolution.
+  - Conflict detection when `--country` and `--language` are used together.
+  - Successful server startup with various country codes.
+
+### Fixed
+- **Improved Country/Locale Error Handling**: Enhanced error messages for unsupported country/locale codes, providing clearer guidance and suggesting the `--list-countries` option.
+
 ## [1.5.4] - 2025-07-15
 
 ### Added
@@ -83,15 +98,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New tool: `summarize_article_for_query(title: str, query: str, max_length: Optional[int] = 250)` to get a summary of a Wikipedia article tailored to a specific query.
 - New resource: `/summary/{title}/query` for the `summarize_article_for_query` tool.
 - New tool: `summarize_article_section(title: str, section_title: str, max_length: Optional[int] = 150)` to get a summary of a specific section of a Wikipedia article.
-- New resource: `/summary/{title}/section/{section_title}` for the `summarize_article_section` tool.
-- New tool: `extract_key_facts(title: str, topic_within_article: Optional[str] = None, count: int = 5)` to extract key facts from a Wikipedia article.
-- New resource: `/facts/{title}` for the `extract_key_facts` tool.
-
-### Changed
-- Updated project version to 1.5.0.
-
-### Fixed
-- N/A (New feature release)
-
-## [1.4.4] - Previous Release Date
-- ... (details of previous release, if you have them) ... 
+- New resource: `/summary/{title}/section/{section_title}` for the `summarize_article_section`
