@@ -115,6 +115,13 @@ def create_server(language: str = "en", country: Optional[str] = None, enable_ca
             "links": links
         }
 
+    @server.tool()
+    def get_coordinates(title: str) -> Dict[str, Any]:
+        """Get the coordinates of a Wikipedia article."""
+        logger.info(f"Tool: Getting coordinates for: {title}")
+        coordinates = wikipedia_client.get_coordinates(title)
+        return coordinates
+
     @server.resource("/search/{query}")
     def search(query: str) -> Dict[str, Any]:
         """Search Wikipedia for articles matching a query."""
@@ -194,5 +201,12 @@ def create_server(language: str = "en", country: Optional[str] = None, enable_ca
             "topic_within_article": topic_within_article,
             "facts": facts
         }
+
+    @server.resource("/coordinates/{title}")
+    def coordinates(title: str) -> Dict[str, Any]:
+        """Get the coordinates of a Wikipedia article."""
+        logger.info(f"Getting coordinates for: {title}")
+        coordinates = wikipedia_client.get_coordinates(title)
+        return coordinates
 
     return server 
