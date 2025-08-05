@@ -26,6 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -euxo pipefail
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install -e .
@@ -33,14 +34,17 @@ jobs:
 
       - name: Run tests
         run: |
+          set -euxo pipefail
           pytest --cov=wikipedia_mcp tests/ -v
 
       - name: Build package
         run: |
+          set -euxo pipefail
           pip install build
           python -m build
           
       - name: Verify package
         run: |
+          set -euxo pipefail
           pip install dist/*.whl
           python -c "import wikipedia_mcp; print('Package verification successful')" 
