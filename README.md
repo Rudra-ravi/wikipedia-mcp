@@ -248,6 +248,21 @@ Get the links contained within a Wikipedia article.
 **Returns:**
 - A list of links to other Wikipedia articles
 
+### `get_coordinates`
+
+Get the coordinates of a Wikipedia article.
+
+**Parameters:**
+- `title` (string): The title of the Wikipedia article
+
+**Returns:**
+- A dictionary containing coordinate information including:
+  - `title`: The article title
+  - `pageid`: The page ID
+  - `coordinates`: List of coordinate objects with latitude, longitude, and metadata
+  - `exists`: Whether the article exists
+  - `error`: Any error message if retrieval failed
+
 ### `get_related_topics`
 
 Get topics related to a Wikipedia article based on links and categories.
@@ -441,6 +456,9 @@ Once the server is running and configured with Claude Desktop, you can use promp
 - "What does Wikipedia say about climate change?"
 - "Find Wikipedia articles related to machine learning."
 - "Get me the introduction section of the article on neural networks from Wikipedia."
+- "What are the coordinates of the Eiffel Tower?"
+- "Find the latitude and longitude of Mount Everest from Wikipedia."
+- "Get coordinate information for famous landmarks in Paris."
 
 ### Using country-specific Wikipedia:
 - "Search Wikipedia China for information about the Great Wall." (uses Chinese Wikipedia)
@@ -463,6 +481,7 @@ The server also provides MCP resources (similar to HTTP endpoints but for MCP):
 - `summary/{title}`: Get a summary of a Wikipedia article
 - `sections/{title}`: Get the sections of a Wikipedia article
 - `links/{title}`: Get the links in a Wikipedia article
+- `coordinates/{title}`: Get the coordinates of a Wikipedia article
 - `summary/{title}/query/{query}/length/{max_length}`: Get a query-focused summary of an article
 - `summary/{title}/section/{section_title}/length/{max_length}`: Get a summary of a specific article section
 - `facts/{title}/topic/{topic_within_article}/count/{count}`: Extract key facts from an article

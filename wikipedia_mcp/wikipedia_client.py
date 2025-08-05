@@ -205,6 +205,7 @@ class WikipediaClient:
             self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
             self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
+            self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)
 
     def _resolve_country_to_language(self, country: str) -> str:
         """Resolve country/locale code to language code.
@@ -644,4 +645,93 @@ class WikipediaClient:
 
         except Exception as e:
             logger.error(f"Error extracting key facts for '{title}': {e}")
-            return [f"Error extracting key facts for '{title}': {str(e)}"] 
+            return [f"Error extracting key facts for '{title}': {str(e)}"]
+
+    def get_coordinates(self, title: str) -> Dict[str, Any]:
+        """Get the coordinates of a Wikipedia article.
+        
+        Args:
+            title: The title of the Wikipedia article.
+            
+        Returns:
+            A dictionary containing the coordinates information.
+        """
+        params = {
+            'action': 'query',
+            'format': 'json',
+            'prop': 'coordinates',
+            'titles': title
+        }
+        
+        # Add variant parameter if needed
+        params = self._add_variant_to_params(params)
+        
+        try:
+            response = requests.get(self.api_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            pages = data.get('query', {}).get('pages', {})
+            
+            if not pages:
+                return {
+                    'title': title,
+                    'coordinates': None,
+                    'exists': False,
+                    'error': 'No page found'
+                }
+            
+            # Get the first (and typically only) page
+            page_data = next(iter(pages.values()))
+            
+            # Check if page exists (pageid > 0 means page exists)
+            if page_data.get('pageid', -1) < 0:
+                return {
+                    'title': title,
+                    'coordinates': None,
+                    'exists': False,
+                    'error': 'Page does not exist'
+                }
+            
+            coordinates = page_data.get('coordinates', [])
+            
+            if not coordinates:
+                return {
+                    'title': page_data.get('title', title),
+                    'pageid': page_data.get('pageid'),
+                    'coordinates': None,
+                    'exists': True,
+                    'error': None,
+                    'message': 'No coordinates available for this article'
+                }
+            
+            # Process coordinates - typically there's one primary coordinate
+            processed_coordinates = []
+            for coord in coordinates:
+                processed_coordinates.append({
+                    'latitude': coord.get('lat'),
+                    'longitude': coord.get('lon'),
+                    'primary': coord.get('primary', False),
+                    'globe': coord.get('globe', 'earth'),
+                    'type': coord.get('type', ''),
+                    'name': coord.get('name', ''),
+                    'region': coord.get('region', ''),
+                    'country': coord.get('country', '')
+                })
+            
+            return {
+                'title': page_data.get('title', title),
+                'pageid': page_data.get('pageid'),
+                'coordinates': processed_coordinates,
+                'exists': True,
+                'error': None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting coordinates for Wikipedia article: {e}")
+            return {
+                'title': title,
+                'coordinates': None,
+                'exists': False,
+                'error': str(e)
+            } 
