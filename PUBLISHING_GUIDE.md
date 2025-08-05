@@ -47,7 +47,7 @@ Trusted Publishing is the modern, secure way to publish to PyPI. It eliminates t
 2. Click **Actions** tab
 3. Click **Release Wikipedia MCP** workflow
 4. Click **Run workflow**
-5. Enter version (e.g., `1.5.5`)
+5. Enter version (e.g., `1.5.6`)
 6. Choose if it's a pre-release
 7. Click **Run workflow**
 

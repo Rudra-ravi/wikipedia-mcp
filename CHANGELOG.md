@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Google ADK Compatibility Tests**: Added comprehensive tests to ensure all tool schemas remain compatible with Google ADK agents.
 
+## [1.5.6] - 2024-08-05
+
+### Added
+- **Wikipedia Coordinates Feature**: Implemented new `get_coordinates` functionality to retrieve latitude, longitude, and metadata for Wikipedia articles. This includes support for multiple coordinate systems, graceful handling of missing pages and articles without coordinates, and compatibility with existing language variants and country codes.
+- **Google ADK Compatibility Tests**: Added comprehensive tests to ensure all tool schemas remain compatible with Google ADK agents.
+
+### Fixed
+- **Google ADK Compatibility**: Fixed compatibility with Google ADK agents by removing `anyOf` schemas from optional parameters that were incompatible with Google's function calling API. Changed parameter type declarations to generate clean, simple schemas while maintaining backward compatibility.
+
 ## [1.5.5] - 2024-07-26
 
 ### Added
