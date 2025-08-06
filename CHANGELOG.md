@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
+
 ### Fixed
 - **Google ADK Compatibility**: Fixed compatibility with Google ADK agents by removing `anyOf` schemas from optional parameters that were incompatible with Google's function calling API. Changed parameter type declarations to generate clean, simple schemas while maintaining backward compatibility.
   - `summarize_article_for_query.max_length`: `Optional[int] = 250` → `int = 250`
@@ -18,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.6] - 2024-08-05
 
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
+
 ### Added
 - **Wikipedia Coordinates Feature**: Implemented new `get_coordinates` functionality to retrieve latitude, longitude, and metadata for Wikipedia articles. This includes support for multiple coordinate systems, graceful handling of missing pages and articles without coordinates, and compatibility with existing language variants and country codes.
 - **Google ADK Compatibility Tests**: Added comprehensive tests to ensure all tool schemas remain compatible with Google ADK agents.
@@ -26,6 +50,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Google ADK Compatibility**: Fixed compatibility with Google ADK agents by removing `anyOf` schemas from optional parameters that were incompatible with Google's function calling API. Changed parameter type declarations to generate clean, simple schemas while maintaining backward compatibility.
 
 ## [1.5.5] - 2024-07-26
+
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
 
 ### Added
 - **Comprehensive Country/Locale Support**: Introduced new CLI arguments `--country` (`-c`) and `--list-countries` to enable intuitive selection of Wikipedia content based on country or locale codes (e.g., `US`, `China`, `Taiwan`). The server now automatically maps these codes to appropriate Wikipedia language variants (e.g., `US` to `en`, `CN` to `zh-hans`, `TW` to `zh-tw`). This feature includes:
@@ -41,6 +77,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Improved Country/Locale Error Handling**: Enhanced error messages for unsupported country/locale codes, providing clearer guidance and suggesting the `--list-countries` option.
 
 ## [1.5.4] - 2025-07-15
+
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
 
 ### Added
 - **Configurable Port**: Added optional `--port` argument for SSE transport (default: 8000). Enables running multiple server instances on the same host without port conflicts.
@@ -74,7 +122,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
+
 ## [1.5.2] - 2025-06-13
+
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
 
 ### Added
 - Added command-line argument `--language` (`-l`) to `wikipedia-mcp` to specify the Wikipedia language for the server (e.g., `wikipedia-mcp --language ja`). This enhancement allows users to easily configure the language at startup. (Related to GitHub Issue #7).
@@ -92,6 +164,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.1] - 2024-06-03
 
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
+
 ### Added
 - Added an optional `language` parameter to `create_server` function in `wikipedia_mcp.server` to allow configuring the `WikipediaClient` with a specific language (e.g., "ja", "es"). Defaults to "en". (Fixes GitHub Issue #7).
 
@@ -102,6 +186,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected assertions in CLI tests (`tests/test_cli.py`) to accurately reflect the behavior of the `stdio` transport in a non-interactive subprocess environment. Tests now expect and verify `subprocess.TimeoutExpired` and check `stderr` for startup messages, ensuring robust testing of CLI startup and logging levels.
 
 ## [1.5.0] - 2025-05-31
+
+## [1.5.7] - 2025-08-06
+
+### Added
+- Initial release for version 1.5.7
+
+### Changed
+- 
+
+### Fixed
+- 
+
 
 ### Added
 - New tool: `summarize_article_for_query(title: str, query: str, max_length: Optional[int] = 250)` to get a summary of a Wikipedia article tailored to a specific query.
