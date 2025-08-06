@@ -62,6 +62,12 @@ def main():
         help="Port for SSE transport (default: 8000, optional)"
     )
     parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind SSE server to (default: 127.0.0.1, use 0.0.0.0 for all interfaces)"
+    )
+    parser.add_argument(
         "--enable-cache",
         action="store_true",
         help="Enable caching for Wikipedia API calls (optional)"
@@ -148,7 +154,8 @@ def main():
         logger.info("To use with Claude Desktop, ensure 'wikipedia-mcp' command is in your claude_desktop_config.json.")
     
     if args.transport == "sse":
-        server.run(transport=args.transport, port=args.port)
+        logger.info("Starting SSE server on %s:%d", args.host, args.port)
+        server.run(transport=args.transport, port=args.port, host=args.host)
     else:
         server.run(transport=args.transport)
 

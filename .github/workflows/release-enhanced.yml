@@ -1,0 +1,200 @@
+name: Enhanced Release Wikipedia MCP
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.5.7)'
+        required: true
+        default: '1.5.7'
+      is_prerelease:
+        description: 'Is this a pre-release?'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write  # Need write permissions for tagging and releases
+  id-token: write  # Required for trusted publishing to PyPI
+
+jobs:
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ github.event.inputs.version }}
+      is_prerelease: ${{ github.event.inputs.is_prerelease }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Update version in pyproject.toml
+        run: |
+          sed -i "s/version = \"[0-9]*\\.[0-9]*\\.[0-9]*\"/version = \"${{ github.event.inputs.version }}\"/g" pyproject.toml
+          echo "Updated version to ${{ github.event.inputs.version }}"
+          cat pyproject.toml | grep version
+
+      - name: Commit version update
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add pyproject.toml
+          git commit -m "Bump version to ${{ github.event.inputs.version }}" || exit 0
+          git push origin HEAD:main
+
+      - name: Create and push tag
+        run: |
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          pytest --cov=wikipedia_mcp tests/ -v
+
+      - name: Build package
+        run: |
+          python -m build
+          echo "Built packages:"
+          ls -la dist/
+
+      - name: Check package
+        run: |
+          twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-and-test]
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare-release.outputs.version }}
+          name: Wikipedia MCP v${{ needs.prepare-release.outputs.version }}
+          body: |
+            ## 🚀 What's Changed
+            
+            Release v${{ needs.prepare-release.outputs.version }} of Wikipedia MCP.
+            
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+            
+            ## 📦 Installation
+            
+            ### From PyPI (Recommended)
+            ```bash
+            pip install wikipedia-mcp==${{ needs.prepare-release.outputs.version }}
+            ```
+            
+            ### Using uvx
+            ```bash
+            uvx wikipedia-mcp
+            ```
+            
+            ### From GitHub Release (Wheel file)
+            Download the wheel file from the assets below and install:
+            ```bash
+            pip install wikipedia_mcp-${{ needs.prepare-release.outputs.version }}-py3-none-any.whl
+            ```
+            
+            ### From Source Distribution
+            ```bash
+            pip install wikipedia-mcp-${{ needs.prepare-release.outputs.version }}.tar.gz
+            ```
+            
+            ## 📁 Files in this release
+            - `wikipedia_mcp-${{ needs.prepare-release.outputs.version }}-py3-none-any.whl` - Python wheel package (recommended)
+            - `wikipedia-mcp-${{ needs.prepare-release.outputs.version }}.tar.gz` - Source distribution
+            
+            ## 🔧 Usage
+            ```bash
+            wikipedia-mcp --help
+            ```
+            
+            **Note:** This release has been automatically published to PyPI.
+          draft: false
+          prerelease: ${{ needs.prepare-release.outputs.is_prerelease }}
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-and-test, create-release]
+    if: ${{ !needs.prepare-release.outputs.is_prerelease }}
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wikipedia-mcp
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  publish-test-pypi:
+    name: Publish to Test PyPI
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-and-test, create-release]
+    if: ${{ needs.prepare-release.outputs.is_prerelease }}
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/wikipedia-mcp
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
