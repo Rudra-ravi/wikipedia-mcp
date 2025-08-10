@@ -21,7 +21,10 @@ def main():
             setattr(namespace, self.dest, values)
             setattr(namespace, '_language_explicitly_set', True)
     
-    parser = argparse.ArgumentParser(description="Wikipedia MCP Server")
+    parser = argparse.ArgumentParser(
+        description="Wikipedia MCP Server",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument(
         "--log-level", 
         type=str, 

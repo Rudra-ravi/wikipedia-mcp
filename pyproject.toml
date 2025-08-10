@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wikipedia-mcp"
-version = "1.5.7"
+version = "1.5.8"
 authors = [
     {name = "Ravi Kumar E", email = "ravikumar@ravikumar-dev.me"},
 ]

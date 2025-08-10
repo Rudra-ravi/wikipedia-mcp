@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.8] - 2025-08-10
+
+### Changed
+- Documentation: Added `--host` usage and Docker/Kubernetes examples (bind `0.0.0.0` and port mapping) for SSE transport.
+
 ## [1.5.7] - 2025-08-06
 
 ### Added
