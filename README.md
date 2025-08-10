@@ -128,14 +128,63 @@ wikipedia-mcp --country france    # French (case insensitive)
 # List all supported countries
 wikipedia-mcp --list-countries
 
-# Optional: Specify port for SSE (default 8000)
-wikipedia-mcp --transport sse --port 8080
+# Optional: Specify host/port for SSE (use 0.0.0.0 for containers)
+wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
 
 # Optional: Enable caching
 wikipedia-mcp --enable-cache
 
 # Combine options
 wikipedia-mcp --country Taiwan --enable-cache --transport sse --port 8080
+
+### Docker/Kubernetes
+
+When running inside containers, bind the SSE server to all interfaces and map
+the container port to the host or service:
+
+```bash
+# Build and run with Docker
+docker build -t wikipedia-mcp .
+docker run --rm -p 8080:8080 wikipedia-mcp \
+  wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
+```
+
+Kubernetes example (minimal):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wikipedia-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wikipedia-mcp
+  template:
+    metadata:
+      labels:
+        app: wikipedia-mcp
+    spec:
+      containers:
+        - name: server
+          image: your-repo/wikipedia-mcp:latest
+          args: ["--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wikipedia-mcp
+spec:
+  selector:
+    app: wikipedia-mcp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+```
 ```
 
 ### Configuration for Claude Desktop
