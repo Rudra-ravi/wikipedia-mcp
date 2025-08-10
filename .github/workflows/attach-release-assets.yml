@@ -1,0 +1,57 @@
+name: Attach release artifacts
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and attach (e.g., v1.5.8)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-attach:
+    name: Build and attach artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine ref
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.vars.outputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip build
+
+      - name: Build package
+        run: |
+          python -m build
+          ls -la dist/
+
+      - name: Attach artifacts to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.ref }}
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
