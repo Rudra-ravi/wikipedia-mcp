@@ -6,8 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install the latest version from PyPI (recommended)
-RUN pip install wikipedia-mcp
+# Copy source code and install from local directory (ensures latest features)
+COPY . .
+RUN pip install --no-cache-dir .
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -23,6 +24,6 @@ LABEL org.opencontainers.image.title="Wikipedia MCP Server"
 LABEL org.opencontainers.image.description="Model Context Protocol server for Wikipedia integration"
 LABEL org.opencontainers.image.url="https://github.com/rudra-ravi/wikipedia-mcp"
 LABEL org.opencontainers.image.source="https://github.com/rudra-ravi/wikipedia-mcp"
-LABEL org.opencontainers.image.version="1.5.6"
+LABEL org.opencontainers.image.version="1.5.8"
 LABEL org.opencontainers.image.authors="Ravi Kumar <ravikumar@ravikumar-dev.me>"
 LABEL org.opencontainers.image.licenses="MIT"
