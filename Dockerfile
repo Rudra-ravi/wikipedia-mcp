@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir .
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+EXPOSE 8080
 
 # MCP server uses stdio for communication with MCP Studio
 # Default to stdio transport (MCP standard)

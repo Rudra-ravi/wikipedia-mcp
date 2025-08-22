@@ -145,8 +145,7 @@ the container port to the host or service:
 ```bash
 # Build and run with Docker
 docker build -t wikipedia-mcp .
-docker run --rm -p 8080:8080 wikipedia-mcp \
-  wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
+docker run --rm -p 8080:8080 wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
 ```
 
 Kubernetes example (minimal):
