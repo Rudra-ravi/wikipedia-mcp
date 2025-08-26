@@ -184,7 +184,6 @@ spec:
       port: 8080
       targetPort: 8080
 ```
-```
 
 ### Configuration for Claude Desktop
 
