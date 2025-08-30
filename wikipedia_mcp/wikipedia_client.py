@@ -183,12 +183,7 @@ class WikipediaClient:
             self.original_language = language
         
         self.enable_cache = enable_cache
-
-        self.user_agent = (
-                "WikipediaMCPServer/"
-                + __version__
-                + " (https://github.com/rudra-ravi/wikipedia-mcp)"
-        )
+        self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
 
         # Parse language and variant
         self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
