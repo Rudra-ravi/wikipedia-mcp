@@ -185,9 +185,9 @@ class WikipediaClient:
         self.enable_cache = enable_cache
 
         self.user_agent = (
-                "WikipediaMCPServer-API/"
+                "WikipediaMCPServer/"
                 + __version__
-                + "; https://github.com/rudra-ravi/wikipedia-mcp"
+                + " (https://github.com/rudra-ravi/wikipedia-mcp)"
         )
 
         # Parse language and variant
