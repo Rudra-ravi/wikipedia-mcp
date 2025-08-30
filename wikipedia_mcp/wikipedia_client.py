@@ -7,6 +7,7 @@ import wikipediaapi
 import requests
 from typing import Dict, List, Optional, Any
 import functools
+from wikipedia_mcp import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -182,8 +183,8 @@ class WikipediaClient:
             self.original_language = language
         
         self.enable_cache = enable_cache
-        self.user_agent = "WikipediaMCPServer/0.1.0 (https://github.com/rudra-ravi/wikipedia-mcp)"
-        
+        self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
+
         # Parse language and variant
         self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
         
@@ -298,7 +299,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
         
         try:
-            response = requests.get(self.api_url, params=params)
+            response = requests.get(self.api_url, headers={'User-Agent': self.user_agent}, params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -667,7 +668,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
         
         try:
-            response = requests.get(self.api_url, params=params)
+            response = requests.get(self.api_url, headers={'User-Agent': self.user_agent}, params=params)
             response.raise_for_status()
             data = response.json()
             
