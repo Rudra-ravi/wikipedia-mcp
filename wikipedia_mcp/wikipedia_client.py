@@ -673,7 +673,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
         
         try:
-            response = requests.get(self.api_url, params=params)
+            response = requests.get(self.api_url, headers={'User-Agent': self.user_agent}, params=params)
             response.raise_for_status()
             data = response.json()
             
