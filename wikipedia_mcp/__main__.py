@@ -75,6 +75,11 @@ def main():
         action="store_true",
         help="Enable caching for Wikipedia API calls (optional)"
     )
+    parser.add_argument(
+        "--access-token",
+        type=str,
+        help="Personal Access Token for Wikipedia API authentication. Can also be set via WIKIPEDIA_ACCESS_TOKEN environment variable. Used to increase rate limits and avoid 403 errors."
+    )
     args = parser.parse_args()
 
     # Handle --list-countries
@@ -124,9 +129,12 @@ def main():
     
     logger = logging.getLogger(__name__)
 
+    # Get access token from argument or environment variable
+    access_token = args.access_token or os.getenv('WIKIPEDIA_ACCESS_TOKEN')
+    
     # Create and start the server
     try:
-        server = create_server(language=args.language, country=args.country, enable_cache=args.enable_cache)
+        server = create_server(language=args.language, country=args.country, enable_cache=args.enable_cache, access_token=access_token)
     except ValueError as e:
         logger.error("Configuration error: %s", e)
         print(f"Error: {e}")

@@ -157,7 +157,7 @@ class WikipediaClient:
         'AZ': 'az', 'Azerbaijan': 'az',
     }
 
-    def __init__(self, language: str = "en", country: Optional[str] = None, enable_cache: bool = False):
+    def __init__(self, language: str = "en", country: Optional[str] = None, enable_cache: bool = False, access_token: Optional[str] = None):
         """Initialize the Wikipedia client.
         
         Args:
@@ -166,6 +166,8 @@ class WikipediaClient:
             country: The country/locale code (e.g., 'US', 'CN', 'TW'). 
                     If provided, overrides language parameter.
             enable_cache: Whether to enable caching for API calls (default: False).
+            access_token: Personal Access Token for Wikipedia API authentication (optional).
+                         Used to increase rate limits and avoid 403 errors.
         """
         # Resolve country to language if country is provided
         if country:
@@ -183,6 +185,7 @@ class WikipediaClient:
             self.original_language = language
         
         self.enable_cache = enable_cache
+        self.access_token = access_token
         self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
 
         # Parse language and variant
@@ -262,6 +265,19 @@ class WikipediaClient:
         else:
             return language, None
     
+    def _get_request_headers(self) -> Dict[str, str]:
+        """Get request headers for API calls, including authentication if available.
+        
+        Returns:
+            Dictionary of headers to use for requests.
+        """
+        headers = {'User-Agent': self.user_agent}
+        
+        if self.access_token:
+            headers['Authorization'] = f'Bearer {self.access_token}'
+        
+        return headers
+
     def _add_variant_to_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Add language variant parameter to API request parameters if needed.
         
@@ -299,7 +315,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
         
         try:
-            response = requests.get(self.api_url, headers={'User-Agent': self.user_agent}, params=params)
+            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -668,7 +684,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
         
         try:
-            response = requests.get(self.api_url, headers={'User-Agent': self.user_agent}, params=params)
+            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
             response.raise_for_status()
             data = response.json()
             

@@ -10,14 +10,14 @@ from wikipedia_mcp.wikipedia_client import WikipediaClient
 
 logger = logging.getLogger(__name__)
 
-def create_server(language: str = "en", country: Optional[str] = None, enable_cache: bool = False) -> FastMCP:
+def create_server(language: str = "en", country: Optional[str] = None, enable_cache: bool = False, access_token: Optional[str] = None) -> FastMCP:
     """Create and configure the Wikipedia MCP server."""
     server = FastMCP(
         name="Wikipedia",
     )
 
     # Initialize Wikipedia client
-    wikipedia_client = WikipediaClient(language=language, country=country, enable_cache=enable_cache)
+    wikipedia_client = WikipediaClient(language=language, country=country, enable_cache=enable_cache, access_token=access_token)
 
     # Register tools
     @server.tool()

@@ -382,25 +382,25 @@ class TestMCPServerTools:
     def test_create_server_with_language(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with the specified language."""
         create_server(language="ja")
-        MockWikipediaClient.assert_called_once_with(language="ja", country=None, enable_cache=False)
+        MockWikipediaClient.assert_called_once_with(language="ja", country=None, enable_cache=False, access_token=None)
 
     @patch('wikipedia_mcp.server.WikipediaClient')
     def test_create_server_default_language(self, MockWikipediaClient):
         """Test that create_server uses 'en' if no language is specified."""
         create_server()
-        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False)
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False, access_token=None)
 
     @patch('wikipedia_mcp.server.WikipediaClient')
     def test_create_server_with_cache_enabled(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with caching enabled."""
         create_server(language="en", enable_cache=True)
-        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=True)
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=True, access_token=None)
 
     @patch('wikipedia_mcp.server.WikipediaClient')
     def test_create_server_with_cache_disabled(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with caching disabled by default."""
         create_server(language="en", enable_cache=False)
-        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False)
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False, access_token=None)
 
     def test_search_wikipedia_tool(self):
         """Test search_wikipedia tool registration."""
