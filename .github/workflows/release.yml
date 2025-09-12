@@ -1,12 +1,15 @@
 name: Release Wikipedia MCP
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., 1.5.7)'
+        description: 'Release version (e.g., 1.6.0)'
         required: true
-        default: '1.5.7'
+        default: '1.6.0'
       prerelease:
         description: 'Mark as prerelease'
         required: false

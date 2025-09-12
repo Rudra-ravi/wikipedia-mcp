@@ -78,7 +78,7 @@ def main():
     parser.add_argument(
         "--access-token",
         type=str,
-        help="Personal Access Token for Wikipedia API authentication. Can also be set via WIKIPEDIA_ACCESS_TOKEN environment variable. Used to increase rate limits and avoid 403 errors."
+        help="Access token for Wikipedia API (optional, can also be set via WIKIPEDIA_ACCESS_TOKEN environment variable)"
     )
     args = parser.parse_args()
 

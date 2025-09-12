@@ -141,6 +141,10 @@ wikipedia-mcp --access-token your_wikipedia_token_here
 export WIKIPEDIA_ACCESS_TOKEN=your_wikipedia_token_here
 wikipedia-mcp
 
+# Security note for SSE: The transport does not define built-in endpoint authentication.
+# To restrict access, run the server behind an authenticating reverse proxy (e.g., Nginx/Traefik),
+# or expose it only on a private network/VPN and use firewall rules.
+
 # Combine options
 wikipedia-mcp --country Taiwan --enable-cache --access-token your_token --transport sse --port 8080
 
@@ -190,6 +194,7 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
+```
 ```
 
 ### Configuration for Claude Desktop
@@ -664,72 +669,6 @@ When contributing new features:
 4. Add integration tests for end-to-end validation
 5. Follow existing test patterns and naming conventions
 
-## Personal Access Tokens (Avoiding Rate Limits)
-
-If you encounter 403 errors or rate limiting issues when making requests to Wikipedia, you can use a Personal Access Token to increase your rate limits.
-
-### Getting a Personal Access Token
-
-1. Go to [Wikimedia API Portal](https://api.wikimedia.org/)
-2. Create an account or log in
-3. Navigate to the "Personal API tokens" section
-4. Generate a new token with appropriate permissions
-
-### Using the Token
-
-You can provide your token in two ways:
-
-#### Via Command Line Argument
-```bash
-wikipedia-mcp --access-token your_wikipedia_token_here
-```
-
-#### Via Environment Variable
-```bash
-export WIKIPEDIA_ACCESS_TOKEN=your_wikipedia_token_here
-wikipedia-mcp
-```
-
-### Configuration Examples
-
-**Claude Desktop with Access Token:**
-```json
-{
-  "mcpServers": {
-    "wikipedia": {
-      "command": "wikipedia-mcp",
-      "args": ["--access-token", "your_token_here"]
-    }
-  }
-}
-```
-
-**Claude Desktop with Environment Variable:**
-```json
-{
-  "mcpServers": {
-    "wikipedia": {
-      "command": "wikipedia-mcp",
-      "env": {
-        "WIKIPEDIA_ACCESS_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
-```
-
-**With Multiple Options:**
-```bash
-wikipedia-mcp --country US --access-token your_token --enable-cache --transport sse
-```
-
-### Security Notes
-
-- Keep your access token secure and never commit it to version control
-- Use environment variables in production environments
-- The token is automatically included in API requests using Bearer authentication
-- Tokens are not logged or exposed in error messages for security
-
 ## Troubleshooting
 
 ### Common Issues
@@ -778,7 +717,7 @@ wikipedia-mcp --country US --access-token your_token --enable-cache --transport 
 #### Other Issues
 
 - **Article Not Found**: Check the exact spelling of article titles
-- **Rate Limiting / 403 Errors**: Use a Personal Access Token to increase rate limits (see [Personal Access Tokens section](#personal-access-tokens-avoiding-rate-limits))
+- **Rate Limiting**: Wikipedia API has rate limits; consider adding delays between requests
 - **Large Articles**: Some Wikipedia articles are very large and may exceed token limits
 
 ## Understanding the Model Context Protocol (MCP)

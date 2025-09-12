@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2025-09-12
+
+### Added
+- CLI now accepts `--access-token` to avoid argparse errors and align with user expectations. This is currently a no-op with a clear warning because FastMCP SSE does not provide built-in authentication.
+
+### Changed
+- Documentation: Added security notes for SSE transport and guidance to secure endpoints via reverse proxy or network controls.
+
+### Fixed
+- Prevented error when passing `--access-token` (addresses GitHub Issue #30).
+
 ## [1.5.8] - 2025-08-10
 
 ### Changed
