@@ -75,8 +75,8 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "New version: $NEW_VERSION"
           if [[ "$CURRENT_VERSION" == "$NEW_VERSION" ]]; then
-            echo "❌ Version is already set to $NEW_VERSION"
-            exit 1
+            echo "ℹ️ Version is already set to $NEW_VERSION; skipping bump."
+            exit 0
           fi
           echo "✅ Version bump is valid"
 
