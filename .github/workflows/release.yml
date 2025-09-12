@@ -29,58 +29,78 @@ env:
   PYTHON_VERSION: '3.11'
 
 jobs:
-  validate-version:
-    name: Validate Version
+  set-version:
+    name: Determine Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ github.event.inputs.version }}
-      is-prerelease: ${{ github.event.inputs.prerelease }}
-      is-draft: ${{ github.event.inputs.draft }}
+      version: ${{ steps.set.outputs.version }}
+      is-prerelease: ${{ steps.set.outputs.is_prerelease }}
+      is-draft: ${{ steps.set.outputs.is_draft }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set version variables
+        id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+            IS_DRAFT="${{ github.event.inputs.draft }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            if [[ "$VERSION" =~ - ]]; then IS_PRERELEASE=true; else IS_PRERELEASE=false; fi
+            IS_DRAFT=false
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "is_draft=$IS_DRAFT" >> $GITHUB_OUTPUT
+
       - name: Validate version format
         run: |
-          VERSION="${{ github.event.inputs.version }}"
+          VERSION="${{ steps.set.outputs.version }}"
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
             echo "❌ Invalid version format: $VERSION"
-            echo "Version must follow semantic versioning (e.g., 1.5.7, 1.5.7-alpha.1)"
+            echo "Version must follow semantic versioning (e.g., 1.6.0, 1.6.0-alpha.1)"
             exit 1
           fi
           echo "✅ Version format is valid: $VERSION"
 
-      - name: Check if tag already exists
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if git ls-remote --tags origin "v$VERSION" | grep -q "v$VERSION"; then
-            echo "❌ Tag v$VERSION already exists"
-            exit 1
-          fi
-          echo "✅ Tag v$VERSION does not exist"
-
-      - name: Validate current version
+      - name: Validate current version (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-          NEW_VERSION="${{ github.event.inputs.version }}"
+          NEW_VERSION="${{ steps.set.outputs.version }}"
           echo "Current version: $CURRENT_VERSION"
           echo "New version: $NEW_VERSION"
-          
-          # Simple version comparison (basic semantic versioning)
           if [[ "$CURRENT_VERSION" == "$NEW_VERSION" ]]; then
             echo "❌ Version is already set to $NEW_VERSION"
             exit 1
           fi
-          echo "✅ Version update is valid"
+          echo "✅ Version bump is valid"
+
+      - name: Validate pyproject matches tag (tag push)
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          TAG_VERSION="${{ steps.set.outputs.version }}"
+          FILE_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "pyproject: $FILE_VERSION, tag: $TAG_VERSION"
+          if [[ "$FILE_VERSION" != "$TAG_VERSION" ]]; then
+            echo "❌ pyproject.toml version ($FILE_VERSION) does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "✅ pyproject.toml version matches tag"
 
   prepare-release:
     name: Prepare Release
     runs-on: ubuntu-latest
-    needs: validate-version
+    needs: set-version
+    if: github.event_name == 'workflow_dispatch'
     outputs:
-      version: ${{ needs.validate-version.outputs.version }}
-      is-prerelease: ${{ needs.validate-version.outputs.is-prerelease }}
-      is-draft: ${{ needs.validate-version.outputs.is-draft }}
+      version: ${{ needs.set-version.outputs.version }}
+      is-prerelease: ${{ needs.set-version.outputs.is-prerelease }}
+      is-draft: ${{ needs.set-version.outputs.is-draft }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -94,19 +114,16 @@ jobs:
 
       - name: Update version in pyproject.toml
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
-          sed -i "s/version = \"[0-9]*\\.[0-9]*\\.[0-9]*\"/version = \"$VERSION\"/g" pyproject.toml
+          VERSION="${{ needs.set-version.outputs.version }}"
+          sed -i "s/version = \"[0-9]*\.[0-9]*\.[0-9]*\"/version = \"$VERSION\"/g" pyproject.toml
           echo "✅ Updated version to $VERSION"
           cat pyproject.toml | grep version
 
       - name: Update CHANGELOG.md
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.set-version.outputs.version }}"
           DATE=$(date +'%Y-%m-%d')
-          
-          # Create changelog entry if it doesn't exist
           if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
-            # Add new version entry after the first ## heading
             sed -i "/^## \[/a\\
           \\
           ## [$VERSION] - $DATE\\
@@ -127,7 +144,7 @@ jobs:
 
       - name: Commit version update
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.set-version.outputs.version }}"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add pyproject.toml CHANGELOG.md
@@ -136,14 +153,14 @@ jobs:
 
       - name: Create and push tag
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.set-version.outputs.version }}"
           git tag v$VERSION
           git push origin v$VERSION
 
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    needs: [validate-version, prepare-release]
+    needs: [set-version, prepare-release]
     strategy:
       fail-fast: false
       matrix:
@@ -152,7 +169,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: v${{ needs.prepare-release.outputs.version }}
+          ref: v${{ needs.set-version.outputs.version }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -204,8 +221,8 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [validate-version, prepare-release, build-and-test]
-    if: needs.prepare-release.outputs.is-draft == 'false'
+    needs: [set-version, prepare-release, build-and-test]
+    if: needs.set-version.outputs.is-draft == 'false'
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -216,57 +233,52 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          VERSION="${{ needs.prepare-release.outputs.version }}"
-          IS_PRERELEASE="${{ needs.prepare-release.outputs.is-prerelease }}"
-          
-          # Extract changelog section for this version
-          CHANGELOG_SECTION=$(awk "/^## \\[$VERSION\\]/,/^## \\[/{if (!/^## \\[/) print}" CHANGELOG.md | head -n -1)
-          
+          VERSION="${{ needs.set-version.outputs.version }}"
+          IS_PRERELEASE="${{ needs.set-version.outputs.is-prerelease }}"
+          CHANGELOG_SECTION=$(awk "/^## \\[${VERSION}\\]/,/^## \\[/" CHANGELOG.md | head -n -1 | tail -n +2)
           if [ -z "$CHANGELOG_SECTION" ]; then
             CHANGELOG_SECTION="Release v$VERSION of Wikipedia MCP."
           fi
-          
-          # Create release body
           cat << EOF > release_body.md
           ## 🚀 What's Changed
-          
+
           $CHANGELOG_SECTION
-          
+
           ## 📦 Installation
-          
+
           ### From PyPI (Recommended)
           \`\`\`bash
           pip install wikipedia-mcp==$VERSION
           \`\`\`
-          
+
           ### Using uvx
           \`\`\`bash
           uvx wikipedia-mcp
           \`\`\`
-          
+
           ### From GitHub Release
           Download the wheel file from the assets below and install:
           \`\`\`bash
           pip install wikipedia_mcp-$VERSION-py3-none-any.whl
           \`\`\`
-          
+
           ### From Source Distribution
           \`\`\`bash
           pip install wikipedia-mcp-$VERSION.tar.gz
           \`\`\`
-          
+
           ## 📁 Files in this release
           - \`wikipedia_mcp-$VERSION-py3-none-any.whl\` - Python wheel package (recommended)
           - \`wikipedia-mcp-$VERSION.tar.gz\` - Source distribution
-          
+
           ## 🔧 Usage
           \`\`\`bash
           wikipedia-mcp --help
           \`\`\`
-          
+
           **Note:** This release has been automatically published to PyPI.
           EOF
-          
+
           echo "body<<EOF" >> $GITHUB_OUTPUT
           cat release_body.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -274,11 +286,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.prepare-release.outputs.version }}
-          name: Wikipedia MCP v${{ needs.prepare-release.outputs.version }}
+          tag_name: v${{ needs.set-version.outputs.version }}
+          name: Wikipedia MCP v${{ needs.set-version.outputs.version }}
           body: ${{ steps.release_notes.outputs.body }}
-          draft: ${{ needs.prepare-release.outputs.is-draft }}
-          prerelease: ${{ needs.prepare-release.outputs.is-prerelease }}
+          draft: ${{ needs.set-version.outputs.is-draft }}
+          prerelease: ${{ needs.set-version.outputs.is-prerelease }}
           files: |
             dist/*
         env:
@@ -287,8 +299,8 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [validate-version, prepare-release, build-and-test, create-release]
-    if: needs.prepare-release.outputs.is-prerelease == 'false'
+    needs: [set-version, prepare-release, build-and-test, create-release]
+    if: needs.set-version.outputs.is-prerelease == 'false'
     environment:
       name: pypi
       url: https://pypi.org/p/wikipedia-mcp
@@ -312,7 +324,7 @@ jobs:
 
       - name: Verify PyPI upload
         run: |
-          VERSION="${{ needs.prepare-release.outputs.version }}"
+          VERSION="${{ needs.set-version.outputs.version }}"
           echo "🔍 Verifying PyPI upload..."
           sleep 10  # Wait for PyPI to process
           pip install wikipedia-mcp==$VERSION --force-reinstall
@@ -322,8 +334,8 @@ jobs:
   rollback-on-failure:
     name: Rollback on Failure
     runs-on: ubuntu-latest
-    needs: [validate-version, prepare-release]
-    if: failure() && needs.prepare-release.outputs.version != ''
+    needs: [set-version, prepare-release]
+    if: failure() && github.event_name == 'workflow_dispatch' && needs.set-version.outputs.version != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -332,7 +344,7 @@ jobs:
 
       - name: Delete tag if exists
         run: |
-          VERSION="${{ needs.prepare-release.outputs.version }}"
+          VERSION="${{ needs.set-version.outputs.version }}"
           if git ls-remote --tags origin "v$VERSION" | grep -q "v$VERSION"; then
             git push origin --delete "v$VERSION" || true
             echo "🗑️ Deleted tag v$VERSION"
@@ -340,7 +352,6 @@ jobs:
 
       - name: Revert version changes
         run: |
-          VERSION="${{ needs.prepare-release.outputs.version }}"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git reset --hard HEAD~1 || true
