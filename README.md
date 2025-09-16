@@ -20,17 +20,19 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 
 ## Features
 
-- **Search Wikipedia**: Find articles matching specific queries
+- **Search Wikipedia**: Find articles matching specific queries with enhanced error handling and diagnostics
 - **Retrieve Article Content**: Get full article text with all information
 - **Article Summaries**: Get concise summaries of articles
 - **Section Extraction**: Retrieve specific sections from articles
 - **Link Discovery**: Find links within articles to related topics
 - **Related Topics**: Discover topics related to a specific article
+- **Connectivity Diagnostics**: Test Wikipedia API connectivity to troubleshoot search issues
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
 - **Country/Locale Support**: Use intuitive country codes like `--country US`, `--country China`, or `--country TW` instead of language codes. Automatically maps to appropriate Wikipedia language variants.
 - **Language Variant Support**: Support for language variants such as Chinese traditional/simplified (e.g., `zh-hans` for Simplified Chinese, `zh-tw` for Traditional Chinese), Serbian scripts (`sr-latn`, `sr-cyrl`), and other regional variants.
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
 - **Google ADK Compatibility**: Fully compatible with Google ADK agents and other AI frameworks that use strict function calling schemas
+- **Robust Error Handling**: Enhanced search functionality with better error reporting and timeout handling
 
 ## Installation
 
@@ -719,6 +721,77 @@ When contributing new features:
 - **Article Not Found**: Check the exact spelling of article titles
 - **Rate Limiting**: Wikipedia API has rate limits; consider adding delays between requests
 - **Large Articles**: Some Wikipedia articles are very large and may exceed token limits
+
+## Troubleshooting Search Issues
+
+If you're experiencing empty search results, use the new diagnostic tools:
+
+### 1. Test Connectivity
+
+Use the `test_wikipedia_connectivity` tool to check if you can reach Wikipedia's API:
+
+```json
+{
+  "tool": "test_wikipedia_connectivity"
+}
+```
+
+This will return diagnostic information including:
+- Connection status (success/failed)
+- Response time
+- Error details if connection fails
+
+### 2. Enhanced Search Error Information
+
+The `search_wikipedia` tool now provides detailed status information:
+
+```json
+{
+  "tool": "search_wikipedia",
+  "arguments": {
+    "query": "your search term",
+    "limit": 10
+  }
+}
+```
+
+Response includes:
+- `status`: "success", "no_results", or "error"
+- `count`: Number of results found
+- `message`: Helpful error messages if search fails
+- `language`: Wikipedia language being searched
+
+### 3. Common Search Issues and Solutions
+
+**Empty Results:**
+- Check network connectivity using the connectivity test
+- Verify your search query isn't empty or too short
+- Try broader search terms
+- Check if you're using the correct language/country setting
+
+**Connection Errors:**
+- Ensure your environment can reach `*.wikipedia.org`
+- Check if you're behind a firewall or proxy
+- Consider using the `--access-token` parameter if you have Wikipedia API credentials
+
+**Query Validation:**
+- Search queries are automatically trimmed and validated
+- Very long queries (>300 chars) are automatically truncated
+- Empty or whitespace-only queries return no results immediately
+
+### 4. Debugging with Verbose Logging
+
+Run the server with verbose logging to see detailed debug information:
+
+```bash
+wikipedia-mcp --log-level DEBUG
+```
+
+This will show:
+- API request URLs and parameters
+- Response status codes
+- Error details for failed requests
+- Query processing information
 
 ## Understanding the Model Context Protocol (MCP)
 
