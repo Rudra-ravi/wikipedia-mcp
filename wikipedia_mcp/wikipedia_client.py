@@ -294,6 +294,51 @@ class WikipediaClient:
             params['variant'] = self.language_variant
         return params
 
+    def test_connectivity(self) -> Dict[str, Any]:
+        """Test connectivity to Wikipedia API.
+        
+        Returns:
+            Dictionary with connectivity test results
+        """
+        test_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
+        test_params = {
+            'action': 'query',
+            'format': 'json',
+            'meta': 'siteinfo',
+            'siprop': 'general'
+        }
+        
+        try:
+            logger.info(f"Testing connectivity to {test_url}")
+            response = requests.get(
+                test_url,
+                headers=self._get_request_headers(),
+                params=test_params,
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            site_info = data.get('query', {}).get('general', {})
+            
+            return {
+                "status": "success",
+                "url": test_url,
+                "language": self.base_language,
+                "site_name": site_info.get('sitename', 'Unknown'),
+                "server": site_info.get('server', 'Unknown'),
+                "response_time_ms": response.elapsed.total_seconds() * 1000
+            }
+            
+        except Exception as e:
+            return {
+                "status": "failed",
+                "url": test_url,
+                "language": self.base_language,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+
     def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search Wikipedia for articles matching a query.
 
@@ -304,25 +349,68 @@ class WikipediaClient:
         Returns:
             A list of search results.
         """
+        if not query or not query.strip():
+            logger.warning("Empty search query provided")
+            return []
+
+        # Clean and validate the query
+        query = query.strip()
+        if len(query) > 300:  # Wikipedia API limit
+            logger.warning(f"Search query too long ({len(query)} chars), truncating to 300")
+            query = query[:300]
+
         params = {
             'action': 'query',
             'format': 'json',
             'list': 'search',
             'utf8': 1,
             'srsearch': query,
-            'srlimit': limit
+            'srlimit': min(limit, 500)  # Wikipedia API limit
         }
 
         # Add variant parameter if needed
         params = self._add_variant_to_params(params)
 
         try:
-            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
+            logger.debug(f"Making search request to {self.api_url} with params: {params}")
+            response = requests.get(
+                self.api_url, 
+                headers=self._get_request_headers(), 
+                params=params,
+                timeout=30  # Add timeout to prevent hanging
+            )
             response.raise_for_status()
+            
+            # Log response status for debugging
+            logger.debug(f"Search API response status: {response.status_code}")
+            
             data = response.json()
+            logger.debug(f"Search API response data keys: {list(data.keys())}")
+
+            # Check for API errors
+            if 'error' in data:
+                error_info = data['error']
+                logger.error(f"Wikipedia API error: {error_info.get('code', 'unknown')} - {error_info.get('info', 'No details')}")
+                return []
+
+            # Check for warnings
+            if 'warnings' in data:
+                for warning_type, warning_data in data['warnings'].items():
+                    logger.warning(f"Wikipedia API warning ({warning_type}): {warning_data}")
+
+            # Extract search results
+            query_data = data.get('query', {})
+            search_results = query_data.get('search', [])
+            
+            logger.debug(f"Found {len(search_results)} search results")
 
             results = []
-            for item in data.get('query', {}).get('search', []):
+            for item in search_results:
+                # Validate that we have required fields
+                if not item.get('title'):
+                    logger.warning(f"Search result missing title: {item}")
+                    continue
+                    
                 results.append({
                     'title': item.get('title', ''),
                     'snippet': item.get('snippet', ''),
@@ -331,9 +419,26 @@ class WikipediaClient:
                     'timestamp': item.get('timestamp', '')
                 })
 
+            logger.info(f"Search for '{query}' returned {len(results)} results")
             return results
+            
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Search request timed out for query '{query}': {e}")
+            return []
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error when searching for '{query}': {e}")
+            return []
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error when searching for '{query}': {e}")
+            return []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error when searching for '{query}': {e}")
+            return []
+        except ValueError as e:
+            logger.error(f"JSON decode error when searching for '{query}': {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error searching Wikipedia: {e}")
+            logger.error(f"Unexpected error searching Wikipedia for '{query}': {type(e).__name__}: {e}")
             return []
 
     def get_article(self, title: str) -> Dict[str, Any]:

@@ -22,13 +22,61 @@ def create_server(language: str = "en", country: Optional[str] = None, enable_ca
     # Register tools
     @server.tool()
     def search_wikipedia(query: str, limit: int = 10) -> Dict[str, Any]:
-        """Search Wikipedia for articles matching a query."""
-        logger.info(f"Tool: Searching Wikipedia for: {query}")
+        """Search Wikipedia for articles matching a query.
+        
+        Args:
+            query: The search query string
+            limit: Maximum number of results to return (default: 10, max: 500)
+        
+        Returns:
+            Dictionary with query, results, and metadata about the search
+        """
+        logger.info(f"Tool: Searching Wikipedia for: '{query}' (limit: {limit})")
+        
+        # Validate input parameters
+        if not query or not query.strip():
+            return {
+                "query": query,
+                "results": [],
+                "error": "Empty or invalid search query provided",
+                "status": "error"
+            }
+        
+        if limit <= 0:
+            limit = 10
+            logger.warning(f"Invalid limit provided, using default: {limit}")
+        elif limit > 500:
+            limit = 500
+            logger.warning(f"Limit too high, capped at: {limit}")
+        
         results = wikipedia_client.search(query, limit=limit)
-        return {
+        
+        # Provide more detailed response
+        response = {
             "query": query,
-            "results": results
+            "results": results,
+            "count": len(results),
+            "status": "success" if results else "no_results",
+            "language": wikipedia_client.base_language
         }
+        
+        if not results:
+            response["message"] = "No search results found. This could be due to network issues, API problems, or no matching articles."
+            logger.warning(f"Search returned no results for query: '{query}'")
+        else:
+            logger.info(f"Search returned {len(results)} results for query: '{query}'")
+        
+        return response
+
+    @server.tool()
+    def test_wikipedia_connectivity() -> Dict[str, Any]:
+        """Test connectivity to Wikipedia API to help diagnose search issues.
+        
+        Returns:
+            Dictionary with connectivity test results and diagnostic information
+        """
+        logger.info("Tool: Testing Wikipedia connectivity")
+        return wikipedia_client.test_connectivity()
 
     @server.tool()
     def get_article(title: str) -> Dict[str, Any]:

@@ -54,6 +54,78 @@ class TestWikipediaClient:
         results = self.client.search('Python')
         assert results == []
 
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_empty_query(self, mock_get):
+        """Test search operation with empty query."""
+        # Should not make API call for empty query
+        results = self.client.search('')
+        assert results == []
+        mock_get.assert_not_called()
+
+        results = self.client.search('   ')
+        assert results == []
+        mock_get.assert_not_called()
+
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_api_error_response(self, mock_get):
+        """Test search operation with API error in response."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            'error': {
+                'code': 'badquery',
+                'info': 'Invalid search query'
+            }
+        }
+        mock_get.return_value = mock_response
+
+        results = self.client.search('test query')
+        assert results == []
+
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_limit_validation(self, mock_get):
+        """Test that search limits are properly validated."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'query': {'search': []}}
+        mock_get.return_value = mock_response
+
+        # Test high limit gets capped
+        self.client.search('test', limit=1000)
+        called_params = mock_get.call_args[1]['params']
+        assert called_params['srlimit'] == 500
+
+    def test_test_connectivity_success(self):
+        """Test connectivity test with successful response."""
+        with patch('wikipedia_mcp.wikipedia_client.requests.get') as mock_get:
+            mock_response = Mock()
+            mock_response.raise_for_status.return_value = None
+            mock_response.json.return_value = {
+                'query': {
+                    'general': {
+                        'sitename': 'Wikipedia',
+                        'server': 'mw-api.example.com'
+                    }
+                }
+            }
+            mock_response.elapsed.total_seconds.return_value = 0.5
+            mock_get.return_value = mock_response
+
+            result = self.client.test_connectivity()
+            assert result['status'] == 'success'
+            assert result['site_name'] == 'Wikipedia'
+            assert 'response_time_ms' in result
+
+    def test_test_connectivity_failure(self):
+        """Test connectivity test with connection failure."""
+        with patch('wikipedia_mcp.wikipedia_client.requests.get') as mock_get:
+            mock_get.side_effect = ConnectionError("Network error")
+
+            result = self.client.test_connectivity()
+            assert result['status'] == 'failed'
+            assert 'error' in result
+            assert result['error_type'] == 'ConnectionError'
+
     @patch('wikipedia_mcp.wikipedia_client.WikipediaClient._extract_sections')
     def test_get_article_success(self, mock_extract_sections):
         """Test successful article retrieval."""
@@ -435,6 +507,12 @@ class TestMCPServerTools:
 
     def test_get_related_topics_tool(self):
         """Test get_related_topics tool registration."""
+        server = create_server()
+        assert server is not None
+        assert server.name == "Wikipedia"
+
+    def test_connectivity_test_tool(self):
+        """Test test_wikipedia_connectivity tool registration."""
         server = create_server()
         assert server is not None
         assert server.name == "Wikipedia"
