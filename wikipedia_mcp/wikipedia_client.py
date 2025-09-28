@@ -294,37 +294,114 @@ class WikipediaClient:
             params['variant'] = self.language_variant
         return params
 
+    def test_connectivity(self) -> Dict[str, Any]:
+        """Test connectivity to the Wikipedia API and return diagnostics."""
+        test_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
+        test_params = {
+            'action': 'query',
+            'format': 'json',
+            'meta': 'siteinfo',
+            'siprop': 'general'
+        }
+
+        try:
+            logger.info(f"Testing connectivity to {test_url}")
+            response = requests.get(
+                test_url,
+                headers=self._get_request_headers(),
+                params=test_params,
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            site_info = data.get('query', {}).get('general', {})
+
+            return {
+                "status": "success",
+                "url": test_url,
+                "language": self.base_language,
+                "site_name": site_info.get('sitename', 'Unknown'),
+                "server": site_info.get('server', 'Unknown'),
+                "response_time_ms": response.elapsed.total_seconds() * 1000
+            }
+
+        except Exception as exc:  # pragma: no cover - safeguarded
+            logger.error("Connectivity test failed: %s", exc)
+            return {
+                "status": "failed",
+                "url": test_url,
+                "language": self.base_language,
+                "error": str(exc),
+                "error_type": type(exc).__name__
+            }
+
     def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Search Wikipedia for articles matching a query.
+        """Search Wikipedia for articles matching a query with validation and diagnostics."""
+        if not query or not query.strip():
+            logger.warning("Empty search query provided")
+            return []
 
-        Args:
-            query: The search query.
-            limit: Maximum number of results to return.
+        trimmed_query = query.strip()
+        if len(trimmed_query) > 300:
+            logger.warning("Search query too long (%d chars), truncating to 300", len(trimmed_query))
+            trimmed_query = trimmed_query[:300]
 
-        Returns:
-            A list of search results.
-        """
+        if limit <= 0:
+            logger.warning("Invalid limit %d provided, using default 10", limit)
+            limit = 10
+        elif limit > 500:
+            logger.warning("Limit %d exceeds maximum, capping at 500", limit)
+            limit = 500
+
         params = {
             'action': 'query',
             'format': 'json',
             'list': 'search',
             'utf8': 1,
-            'srsearch': query,
+            'srsearch': trimmed_query,
             'srlimit': limit
         }
 
-        # Add variant parameter if needed
         params = self._add_variant_to_params(params)
 
         try:
-            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
+            logger.debug("Making search request to %s with params %s", self.api_url, params)
+            response = requests.get(
+                self.api_url,
+                headers=self._get_request_headers(),
+                params=params,
+                timeout=30
+            )
             response.raise_for_status()
             data = response.json()
 
-            results = []
-            for item in data.get('query', {}).get('search', []):
+            if 'error' in data:
+                error_info = data['error']
+                logger.error(
+                    "Wikipedia API error: %s - %s",
+                    error_info.get('code', 'unknown'),
+                    error_info.get('info', 'No details')
+                )
+                return []
+
+            if 'warnings' in data:
+                for warning_type, warning_body in data['warnings'].items():
+                    logger.warning("Wikipedia API warning (%s): %s", warning_type, warning_body)
+
+            query_data = data.get('query', {})
+            search_results = query_data.get('search', [])
+            logger.info("Search for '%s' returned %d results", trimmed_query, len(search_results))
+
+            results: List[Dict[str, Any]] = []
+            for item in search_results:
+                title = item.get('title')
+                if not title:
+                    logger.warning("Search result missing title: %s", item)
+                    continue
+
                 results.append({
-                    'title': item.get('title', ''),
+                    'title': title,
                     'snippet': item.get('snippet', ''),
                     'pageid': item.get('pageid', 0),
                     'wordcount': item.get('wordcount', 0),
@@ -332,8 +409,24 @@ class WikipediaClient:
                 })
 
             return results
-        except Exception as e:
-            logger.error(f"Error searching Wikipedia: {e}")
+
+        except requests.exceptions.Timeout as exc:
+            logger.error("Search request timed out for query '%s': %s", trimmed_query, exc)
+            return []
+        except requests.exceptions.ConnectionError as exc:
+            logger.error("Connection error when searching for '%s': %s", trimmed_query, exc)
+            return []
+        except requests.exceptions.HTTPError as exc:
+            logger.error("HTTP error when searching for '%s': %s", trimmed_query, exc)
+            return []
+        except requests.exceptions.RequestException as exc:
+            logger.error("Request error when searching for '%s': %s", trimmed_query, exc)
+            return []
+        except ValueError as exc:
+            logger.error("JSON decode error when searching for '%s': %s", trimmed_query, exc)
+            return []
+        except Exception as exc:  # pragma: no cover - unexpected safeguard
+            logger.error("Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc)
             return []
 
     def get_article(self, title: str) -> Dict[str, Any]:

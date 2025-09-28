@@ -2,7 +2,9 @@
 Comprehensive tests for Wikipedia MCP server tools.
 """
 
+import asyncio
 import pytest
+import requests
 from unittest.mock import Mock, patch, MagicMock
 from wikipedia_mcp.server import create_server
 from wikipedia_mcp.wikipedia_client import WikipediaClient
@@ -48,9 +50,42 @@ class TestWikipediaClient:
 
     @patch('wikipedia_mcp.wikipedia_client.requests.get')
     def test_search_failure(self, mock_get):
-        """Test search operation with API failure."""
-        mock_get.side_effect = Exception("API Error")
-        
+        """Test handling of search failures when exceptions occur."""
+        mock_get.side_effect = Exception('API error')
+        results = self.client.search('Python')
+        assert results == []
+
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_empty_query(self, mock_get):
+        """Empty queries should not trigger HTTP calls."""
+        results = self.client.search('')
+        assert results == []
+        mock_get.assert_not_called()
+
+        results = self.client.search('   ')
+        assert results == []
+        mock_get.assert_not_called()
+
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_limit_validation(self, mock_get):
+        """Ensure the limit is bounded within API constraints."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'query': {'search': []}}
+        mock_get.return_value = mock_response
+
+        self.client.search('Python', limit=1000)
+        _, kwargs = mock_get.call_args
+        assert kwargs['params']['srlimit'] == 500
+
+    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+    def test_search_api_error(self, mock_get):
+        """Handle API error payloads gracefully."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'error': {'code': 'badquery', 'info': 'Invalid query'}}
+        mock_get.return_value = mock_response
+
         results = self.client.search('Python')
         assert results == []
 
@@ -438,6 +473,18 @@ class TestMCPServerTools:
         server = create_server()
         assert server is not None
         assert server.name == "Wikipedia"
+
+    def test_connectivity_tool(self):
+        """Ensure the connectivity test tool is registered."""
+        server = create_server()
+        assert server is not None
+
+        async def gather_tools():
+            tools = await server.get_tools()
+            return list(tools.keys())
+
+        tool_names = asyncio.run(gather_tools())
+        assert 'test_wikipedia_connectivity' in tool_names
 
 
 class TestIntegration:

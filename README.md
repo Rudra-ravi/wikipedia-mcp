@@ -20,7 +20,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 
 ## Features
 
-- **Search Wikipedia**: Find articles matching specific queries
+- **Search Wikipedia**: Find articles matching specific queries with enhanced diagnostics
 - **Retrieve Article Content**: Get full article text with all information
 - **Article Summaries**: Get concise summaries of articles
 - **Section Extraction**: Retrieve specific sections from articles
@@ -719,6 +719,81 @@ When contributing new features:
 - **Article Not Found**: Check the exact spelling of article titles
 - **Rate Limiting**: Wikipedia API has rate limits; consider adding delays between requests
 - **Large Articles**: Some Wikipedia articles are very large and may exceed token limits
+
+## Troubleshooting Search Issues
+
+If you're experiencing empty search results, use the new diagnostic tools:
+
+### 1. Test Connectivity
+
+Use the `test_wikipedia_connectivity` tool to check if you can reach Wikipedia's API:
+
+```json
+{
+  "tool": "test_wikipedia_connectivity"
+}
+```
+
+This returns diagnostics including:
+- Connection status (`success` or `failed`)
+- Response time in milliseconds
+- Site/host information when successful
+- Error details when connectivity fails
+
+### 2. Enhanced Search Error Information
+
+The `search_wikipedia` tool now returns detailed metadata:
+
+```json
+{
+  "tool": "search_wikipedia",
+  "arguments": {
+    "query": "Ada Lovelace",
+    "limit": 10
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "query": "Ada Lovelace",
+  "results": [...],
+  "count": 5,
+  "status": "success",
+  "language": "en"
+}
+```
+
+When no results are found, you receive:
+
+```json
+{
+  "query": "nonexistent",
+  "results": [],
+  "status": "no_results",
+  "count": 0,
+  "language": "en",
+  "message": "No search results found. This could indicate connectivity issues, API errors, or simply no matching articles."
+}
+```
+
+### 3. Common Search Issues and Solutions
+
+- **Empty results**: Run the connectivity test, verify query spelling, try broader terms.
+- **Connection errors**: Check firewall or proxy settings, ensure `*.wikipedia.org` is reachable.
+- **API limits**: Requests with `limit > 500` are automatically capped; negative values reset to the default (10).
+
+### 4. Debugging with Verbose Logging
+
+Launch the server with debug logging for deeper insight:
+
+```bash
+wikipedia-mcp --log-level DEBUG
+```
+
+This emits the request parameters, response status codes, and any warnings returned by the API.
 
 ## Understanding the Model Context Protocol (MCP)
 

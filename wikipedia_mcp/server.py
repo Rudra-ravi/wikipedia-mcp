@@ -23,12 +23,48 @@ def create_server(language: str = "en", country: Optional[str] = None, enable_ca
     @server.tool()
     def search_wikipedia(query: str, limit: int = 10) -> Dict[str, Any]:
         """Search Wikipedia for articles matching a query."""
-        logger.info(f"Tool: Searching Wikipedia for: {query}")
-        results = wikipedia_client.search(query, limit=limit)
-        return {
+        logger.info("Tool: Searching Wikipedia for '%s' (limit=%d)", query, limit)
+
+        if not query or not query.strip():
+            logger.warning("Search tool called with empty query")
+            return {
+                "query": query,
+                "results": [],
+                "status": "error",
+                "message": "Empty or invalid search query provided"
+            }
+
+        validated_limit = limit
+        if limit <= 0:
+            validated_limit = 10
+            logger.warning("Invalid limit %d; using default %d", limit, validated_limit)
+        elif limit > 500:
+            validated_limit = 500
+            logger.warning("Limit %d capped to %d", limit, validated_limit)
+
+        results = wikipedia_client.search(query, limit=validated_limit)
+        status = "success" if results else "no_results"
+        response: Dict[str, Any] = {
             "query": query,
-            "results": results
+            "results": results,
+            "status": status,
+            "count": len(results),
+            "language": wikipedia_client.base_language
         }
+
+        if not results:
+            response["message"] = (
+                "No search results found. This could indicate connectivity issues, "
+                "API errors, or simply no matching articles."
+            )
+
+        return response
+
+    @server.tool()
+    def test_wikipedia_connectivity() -> Dict[str, Any]:
+        """Provide diagnostics for Wikipedia API connectivity."""
+        logger.info("Tool: Testing Wikipedia connectivity")
+        return wikipedia_client.test_connectivity()
 
     @server.tool()
     def get_article(title: str) -> Dict[str, Any]:

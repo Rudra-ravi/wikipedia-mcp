@@ -22,7 +22,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write  # Need write permissions for tagging and releases
+  contents: read
   id-token: write  # Required for trusted publishing to PyPI
 
 env:
@@ -96,23 +96,32 @@ jobs:
     name: Prepare Release
     runs-on: ubuntu-latest
     needs: set-version
-    if: github.event_name == 'workflow_dispatch'
     outputs:
-      version: ${{ needs.set-version.outputs.version }}
-      is-prerelease: ${{ needs.set-version.outputs.is-prerelease }}
-      is-draft: ${{ needs.set-version.outputs.is-draft }}
+      version: ${{ steps.version_passthrough.outputs.version || needs.set-version.outputs.version }}
+      is-prerelease: ${{ steps.version_passthrough.outputs.is_prerelease || needs.set-version.outputs.is-prerelease }}
+      is-draft: ${{ steps.version_passthrough.outputs.is_draft || needs.set-version.outputs.is-draft }}
     steps:
+      - name: Passthrough version outputs
+        id: version_passthrough
+        run: |
+          echo "version=${{ needs.set-version.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${{ needs.set-version.outputs.is-prerelease }}" >> $GITHUB_OUTPUT
+          echo "is_draft=${{ needs.set-version.outputs.is-draft }}" >> $GITHUB_OUTPUT
+
       - name: Checkout code
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update version in pyproject.toml
+        if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ needs.set-version.outputs.version }}"
           sed -i "s/version = \"[0-9]*\.[0-9]*\.[0-9]*\"/version = \"$VERSION\"/g" pyproject.toml
@@ -120,6 +129,7 @@ jobs:
           cat pyproject.toml | grep version
 
       - name: Update CHANGELOG.md
+        if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ needs.set-version.outputs.version }}"
           DATE=$(date +'%Y-%m-%d')
@@ -143,6 +153,7 @@ jobs:
           fi
 
       - name: Commit version update
+        if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ needs.set-version.outputs.version }}"
           git config --local user.email "action@github.com"
@@ -152,6 +163,7 @@ jobs:
           git push origin HEAD:main
 
       - name: Create and push tag
+        if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ needs.set-version.outputs.version }}"
           git tag v$VERSION
@@ -169,7 +181,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: v${{ needs.set-version.outputs.version }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || format('refs/tags/v{0}', needs.prepare-release.outputs.version) }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -221,8 +233,10 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [set-version, prepare-release, build-and-test]
-    if: needs.set-version.outputs.is-draft == 'false'
+    needs: [set-version, build-and-test]
+    if: needs.prepare-release.outputs.is-draft == 'false'
+    permissions:
+      contents: write
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -233,9 +247,9 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          VERSION="${{ needs.set-version.outputs.version }}"
-          IS_PRERELEASE="${{ needs.set-version.outputs.is-prerelease }}"
-          CHANGELOG_SECTION=$(awk "/^## \\[${VERSION}\\]/,/^## \\[/" CHANGELOG.md | head -n -1 | tail -n +2)
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          IS_PRERELEASE="${{ needs.prepare-release.outputs.is_prerelease }}"
+          CHANGELOG_SECTION=$(awk "/^## \[${VERSION}\\]/,/^## \[/" CHANGELOG.md | head -n -1 | tail -n +2)
           if [ -z "$CHANGELOG_SECTION" ]; then
             CHANGELOG_SECTION="Release v$VERSION of Wikipedia MCP."
           fi
@@ -286,11 +300,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.set-version.outputs.version }}
-          name: Wikipedia MCP v${{ needs.set-version.outputs.version }}
+          tag_name: v${{ needs.prepare-release.outputs.version }}
+          name: Wikipedia MCP v${{ needs.prepare-release.outputs.version }}
           body: ${{ steps.release_notes.outputs.body }}
-          draft: ${{ needs.set-version.outputs.is-draft }}
-          prerelease: ${{ needs.set-version.outputs.is-prerelease }}
+          draft: ${{ needs.prepare-release.outputs.is_draft }}
+          prerelease: ${{ needs.prepare-release.outputs.is_prerelease }}
           files: |
             dist/*
         env:
@@ -300,16 +314,24 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: [set-version, prepare-release, build-and-test, create-release]
-    if: needs.set-version.outputs.is-prerelease == 'false'
+    if: needs.prepare-release.outputs.is-prerelease == 'false'
     environment:
       name: pypi
       url: https://pypi.org/p/wikipedia-mcp
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist-packages
           path: dist/
+
+      - name: Prepare environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine
 
       - name: Verify package before publishing
         run: |
@@ -319,12 +341,10 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Verify PyPI upload
         run: |
-          VERSION="${{ needs.set-version.outputs.version }}"
+          VERSION="${{ needs.prepare-release.outputs.version }}"
           echo "🔍 Verifying PyPI upload..."
           sleep 10  # Wait for PyPI to process
           pip install wikipedia-mcp==$VERSION --force-reinstall
@@ -334,8 +354,10 @@ jobs:
   rollback-on-failure:
     name: Rollback on Failure
     runs-on: ubuntu-latest
-    needs: [set-version, prepare-release]
+    needs: [set-version, build-and-test]
     if: failure() && github.event_name == 'workflow_dispatch' && needs.set-version.outputs.version != ''
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -4,47 +4,45 @@ This document describes how to create new releases for the Wikipedia MCP project
 
 ## Automated Release Using GitHub Actions
 
-We have set up a GitHub Actions workflow that automates most of the release process. The workflow is defined in the `.github/workflows/release.yml` file and can be triggered manually from the GitHub interface.
+The project ships from a single workflow defined in `.github/workflows/release.yml`. The workflow supports two entry points:
 
-### Steps to Create a Release with GitHub Actions
+- **Tag push (`v*`)** – When you push an annotated tag such as `v1.7.0`, the workflow validates that `pyproject.toml` already contains that version, builds the artifacts, attaches them to a GitHub Release, and publishes the package to PyPI via trusted publishing (OIDC) once tests pass.
+- **Manual dispatch** – From the GitHub UI you can trigger the workflow to bump the version for you on `main`, create a tag, and then run the same verification/publish steps. This is useful when you do not want to create the tag locally.
 
-1. **Navigate to the Actions tab** in your GitHub repository at https://github.com/rudra-ravi/wikipedia-mcp/actions
+### Triggering a Release Manually (workflow_dispatch)
 
-2. **Select the "Release Wikipedia MCP" workflow** from the list of workflows on the left side.
+1. Open the **Actions** tab in GitHub and select **Release Wikipedia MCP**.
+2. Click **Run workflow** and supply:
+   - **Version** – e.g. `1.7.0`
+   - **Prerelease** – `true` if this should be marked as a pre-release
+   - **Draft** – `true` to create a draft GitHub Release without publishing to PyPI
+3. Submit the run and monitor the "Release Wikipedia MCP" workflow for progress.
+4. After completion confirm:
+   - `pyproject.toml` on `main` reflects the new version
+   - A `vX.Y.Z` tag was created
+   - The GitHub Release lists the built wheel and sdist
+   - The package is available on PyPI (skipped when Draft or Prerelease is selected)
 
-3. **Click the "Run workflow" button** (dropdown at the right side).
+### When Releasing from a Local Tag
 
-4. **Enter the release details**:
-   - **Version**: For version 1.0.2, enter `1.0.2`
-   - **Is this a pre-release?**: Select if this is a pre-release or a full release
+If you prefer to manage version bumps locally:
 
-5. **Click "Run workflow"** to start the release process.
+1. Update `pyproject.toml` with the new semantic version.
+2. Commit the change and create an annotated tag `vX.Y.Z` that matches the version field.
+3. Push the commit and tag. The release workflow will detect the tag, run tests/builds, publish to GitHub Releases, and publish to PyPI if the tag is a full release.
 
-6. **Monitor the workflow execution**:
-   - The workflow will:
-     - Update the version in setup.py
-     - Build the Python package
-     - Create a Git tag and commit
-     - Create a GitHub Release with the built packages attached
-     - Publish to PyPI (if not a pre-release)
+> Note: Because PyPI uses trusted publishing, no PyPI token is stored in GitHub secrets and only OIDC-enabled workflows can publish. Ensure the tag is pushed from the canonical repo so the trusted publisher configuration matches.
 
-7. **Once completed**, verify that:
-   - The new tag appears in your repository
-   - The GitHub Release is created with the correct assets
-   - The package is published to PyPI (if not a pre-release)
+### Release Workflow Overview
 
-### Release Workflow Details
+For both entry points the pipeline:
 
-The GitHub Actions workflow performs these steps:
-
-1. Checks out the repository code
-2. Sets up Python environment
-3. Installs required dependencies
-4. Updates the version number in setup.py
-5. Builds the Python package (source distribution and wheel)
-6. Creates a Git tag and commits the version change
-7. Creates a GitHub Release with the built packages
-8. Publishes the package to PyPI (if not a pre-release)
+1. Determines the version and prerelease/draft flags.
+2. Optionally (manual runs only) edits `pyproject.toml` and `CHANGELOG.md`, commits, and pushes a matching tag.
+3. Builds and tests the project on Python 3.10, 3.11, and 3.12.
+4. Uploads build artifacts for reuse by downstream jobs.
+5. Creates (or updates) the GitHub Release and attaches the built wheel and source distribution.
+6. Publishes to PyPI using `pypa/gh-action-pypi-publish@release/v1` with OIDC if the release is not marked as a prerelease or draft.
 
 ## Manually Creating a Release (Alternative Method)
 
@@ -136,15 +134,13 @@ When creating releases, keep these guidelines in mind:
 
 4. **Security**: Prioritize fixes for security vulnerabilities
 
-## Setting Up PyPI Credentials for GitHub Actions
+## PyPI Trusted Publishing Configuration
 
-To enable automatic publishing to PyPI, you need to add your PyPI credentials as GitHub secrets:
+This repository uses **PyPI Trusted Publishing**. Instead of storing a username/password in GitHub secrets, PyPI is configured to trust the `Release Wikipedia MCP` workflow. During the `publish-pypi` job GitHub issues an OpenID Connect (OIDC) token that PyPI validates. To keep releases working:
 
-1. Go to your repository's Settings tab
-2. Click on "Secrets and variables" → "Actions"
-3. Add these secrets:
-   - PYPI_USERNAME: Your PyPI username
-   - PYPI_PASSWORD: Your PyPI password or token (recommended)
+1. Ensure the workflow file path (`.github/workflows/release.yml`), repository owner, and environment `pypi` remain registered on PyPI under *Manage project → Publishing → Trusted Publishers*.
+2. Keep `id-token: write` permissions enabled for the `publish-pypi` job in the workflow.
+3. If you rename the workflow, repository, or environment, update the trusted publisher configuration on PyPI accordingly.
 
 ## Troubleshooting
 
