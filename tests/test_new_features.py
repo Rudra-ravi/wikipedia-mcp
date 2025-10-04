@@ -239,9 +239,7 @@ class TestCachingFunctionality:
 
         for method_name in cached_methods:
             method = getattr(client, method_name)
-            assert hasattr(
-                method, "cache_info"
-            ), f"Method {method_name} should be cached"
+            assert hasattr(method, "cache_info"), f"Method {method_name} should be cached"
 
     def test_cache_size_limit(self):
         """Test that cache has proper size limit."""

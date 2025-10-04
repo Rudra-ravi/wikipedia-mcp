@@ -44,32 +44,22 @@ def test_cli_stdio_transport_starts():
 
     # For stdio mode, we now expect the process to start, log, and exit cleanly.
     # It does not block indefinitely in the test environment with piped stdin.
-    assert not isinstance(
-        result, subprocess.TimeoutExpired
-    ), "Expected command to complete without timing out"
+    assert not isinstance(result, subprocess.TimeoutExpired), "Expected command to complete without timing out"
 
     stderr_output = _textify(getattr(result, "stderr", ""))
-    assert result.returncode == 0, (
-        f"Expected return code 0, got {result.returncode}. "
-        f"Stderr: {stderr_output}"
-    )
+    assert result.returncode == 0, f"Expected return code 0, got {result.returncode}. " f"Stderr: {stderr_output}"
 
     # Check that some logging output was captured
     assert "Starting Wikipedia MCP server with stdio transport" in stderr_output, (
-        "Expected startup message missing in stderr. "
-        f"Observed: {stderr_output}"
+        "Expected startup message missing in stderr. " f"Observed: {stderr_output}"
     )
     assert "Using stdio transport - suppressing direct stdout messages" in stderr_output, (
-        "Expected stdio mode message missing in stderr. "
-        f"Observed: {stderr_output}"
+        "Expected stdio mode message missing in stderr. " f"Observed: {stderr_output}"
     )
 
     # Verify stdout is empty (no prints interfering with stdio protocol)
     stdout_output = _textify(getattr(result, "stdout", ""))
-    assert stdout_output.strip() == "", (
-        "stdout should be empty for stdio transport. "
-        f"Observed: {stdout_output}"
-    )
+    assert stdout_output.strip() == "", "stdout should be empty for stdio transport. " f"Observed: {stdout_output}"
 
 
 def test_cli_sse_transport_starts():
@@ -78,17 +68,14 @@ def test_cli_sse_transport_starts():
     result = run_mcp_command(args, expect_timeout=True)
 
     # For sse mode, we expect the process to start the HTTP server and then timeout
-    assert isinstance(
-        result, subprocess.TimeoutExpired
-    ), "Expected timeout for sse mode"
+    assert isinstance(result, subprocess.TimeoutExpired), "Expected timeout for sse mode"
 
     # Check that logging output was captured
     stderr_output = _textify(getattr(result, "stderr", ""))
 
     # Should see uvicorn startup messages for sse mode
     assert (
-        "uvicorn" in stderr_output.lower()
-        or "application startup" in stderr_output.lower()
+        "uvicorn" in stderr_output.lower() or "application startup" in stderr_output.lower()
     ), "Expected uvicorn startup messages for sse transport"
 
 
@@ -96,12 +83,8 @@ def test_cli_invalid_transport():
     """Test CLI behavior with an invalid transport option."""
     args = ["--transport", "invalid_transport_option"]
     result = run_mcp_command(args)
-    assert (
-        result.returncode != 0
-    ), "Should exit with non-zero code for invalid transport"
-    assert (
-        "invalid choice: 'invalid_transport_option'" in result.stderr
-    ), "Should show argparse error"
+    assert result.returncode != 0, "Should exit with non-zero code for invalid transport"
+    assert "invalid choice: 'invalid_transport_option'" in result.stderr, "Should show argparse error"
 
 
 def test_cli_help_message():
@@ -127,20 +110,17 @@ def test_cli_log_levels():
 
         stderr_output = _textify(getattr(result, "stderr", ""))
         assert result.returncode == 0, (
-            f"Expected return code 0 for log level {level}, got {result.returncode}. "
-            f"Stderr: {stderr_output}"
+            f"Expected return code 0 for log level {level}, got {result.returncode}. " f"Stderr: {stderr_output}"
         )
 
         startup_message = "Starting Wikipedia MCP server with stdio transport"
         if level in ["DEBUG", "INFO"]:
             assert startup_message in stderr_output, (
-                f"Startup message missing for log level {level}. "
-                f"Stderr: {stderr_output}"
+                f"Startup message missing for log level {level}. " f"Stderr: {stderr_output}"
             )
         elif level in ["WARNING", "ERROR"]:
             assert startup_message not in stderr_output, (
-                f"Startup message unexpectedly present for log level {level}. "
-                f"Stderr: {stderr_output}"
+                f"Startup message unexpectedly present for log level {level}. " f"Stderr: {stderr_output}"
             )
             # We can also check if *any* output is present for WARNING/ERROR,
             # or if specific higher-level messages appear, but for now, ensuring the INFO message

@@ -39,9 +39,7 @@ class TestLanguageVariantParsing:
         for variant_code, expected_base, expected_variant in test_cases:
             client = WikipediaClient(language=variant_code)
             base, variant = client._parse_language_variant(variant_code)
-            assert (
-                base == expected_base
-            ), f"Failed for {variant_code}: expected base {expected_base}, got {base}"
+            assert base == expected_base, f"Failed for {variant_code}: expected base {expected_base}, got {base}"
             assert (
                 variant == expected_variant
             ), f"Failed for {variant_code}: expected variant {expected_variant}, got {variant}"
@@ -264,12 +262,8 @@ class TestLanguageVariantMapping:
         ]
 
         for variant in expected_chinese_variants:
-            assert (
-                variant in client.LANGUAGE_VARIANTS
-            ), f"Missing Chinese variant: {variant}"
-            assert (
-                client.LANGUAGE_VARIANTS[variant] == "zh"
-            ), f"Wrong base for {variant}"
+            assert variant in client.LANGUAGE_VARIANTS, f"Missing Chinese variant: {variant}"
+            assert client.LANGUAGE_VARIANTS[variant] == "zh", f"Wrong base for {variant}"
 
     def test_serbian_variants_comprehensive(self):
         """Test that Serbian script variants are supported."""
@@ -278,9 +272,5 @@ class TestLanguageVariantMapping:
         expected_serbian_variants = ["sr-latn", "sr-cyrl"]
 
         for variant in expected_serbian_variants:
-            assert (
-                variant in client.LANGUAGE_VARIANTS
-            ), f"Missing Serbian variant: {variant}"
-            assert (
-                client.LANGUAGE_VARIANTS[variant] == "sr"
-            ), f"Wrong base for {variant}"
+            assert variant in client.LANGUAGE_VARIANTS, f"Missing Serbian variant: {variant}"
+            assert client.LANGUAGE_VARIANTS[variant] == "sr", f"Wrong base for {variant}"

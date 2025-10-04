@@ -25,9 +25,7 @@ class TestGoogleADKCompatibility:
         ]
 
         for expected_tool in problematic_tools:
-            assert (
-                expected_tool in tools
-            ), f"Expected tool '{expected_tool}' to be registered"
+            assert expected_tool in tools, f"Expected tool '{expected_tool}' to be registered"
 
         for tool_name in tools:
             tool_obj = await server.get_tool(tool_name)

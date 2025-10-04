@@ -83,9 +83,7 @@ class TestWikipediaClient:
         """Handle API error payloads gracefully."""
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
-        mock_response.json.return_value = {
-            "error": {"code": "badquery", "info": "Invalid query"}
-        }
+        mock_response.json.return_value = {"error": {"code": "badquery", "info": "Invalid query"}}
         mock_get.return_value = mock_response
 
         results = self.client.search("Python")
@@ -101,16 +99,12 @@ class TestWikipediaClient:
         mock_page.pageid = 12345
         mock_page.summary = "Python is a programming language"
         mock_page.text = "Full article text here"
-        mock_page.fullurl = (
-            "https://en.wikipedia.org/wiki/Python_(programming_language)"
-        )
+        mock_page.fullurl = "https://en.wikipedia.org/wiki/Python_(programming_language)"
         mock_page.categories = {"Category:Programming languages": None}
         mock_page.links = {"Link1": None, "Link2": None}
         mock_page.sections = []
 
-        mock_extract_sections.return_value = [
-            {"title": "History", "level": 0, "text": "History text", "sections": []}
-        ]
+        mock_extract_sections.return_value = [{"title": "History", "level": 0, "text": "History text", "sections": []}]
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
             article = self.client.get_article("Python (programming language)")
@@ -223,9 +217,7 @@ class TestWikipediaClient:
 
         with patch.object(self.client.wiki, "page") as mock_wiki_page:
             mock_wiki_page.side_effect = lambda title: (
-                mock_related_page
-                if title in ["Related Link 1", "Related Link 2"]
-                else mock_page
+                mock_related_page if title in ["Related Link 1", "Related Link 2"] else mock_page
             )
 
             related = self.client.get_related_topics("Test Page", limit=3)
@@ -272,15 +264,12 @@ class TestWikipediaClient:
         mock_page.exists.return_value = True
         mock_page.title = "Test Page"
         mock_page.text = (
-            "This is a long text about a specific keyword. "
-            "We want to find this keyword and summarize around it."
+            "This is a long text about a specific keyword. " "We want to find this keyword and summarize around it."
         )
         mock_page.summary = "This is a general summary."
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
-            summary = self.client.summarize_for_query(
-                "Test Page", "keyword", max_length=50
-            )
+            summary = self.client.summarize_for_query("Test Page", "keyword", max_length=50)
 
         assert "keyword" in summary
         assert len(summary) <= 50 + 3  # for "..."
@@ -294,13 +283,9 @@ class TestWikipediaClient:
         mock_page.summary = "A general summary content."
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
-            summary = self.client.summarize_for_query(
-                "Test Page", "missing_keyword", max_length=30
-            )
+            summary = self.client.summarize_for_query("Test Page", "missing_keyword", max_length=30)
 
-        assert (
-            "A general summary content."[:30] in summary
-        )  # Should return start of summary
+        assert "A general summary content."[:30] in summary  # Should return start of summary
 
     def test_summarize_for_query_page_not_exists(self):
         """Test query-focused summary when page does not exist."""
@@ -314,9 +299,7 @@ class TestWikipediaClient:
         """Test successful section summary retrieval."""
         mock_section_target = Mock()
         mock_section_target.title = "Target Section"
-        mock_section_target.text = (
-            "This is the text of the target section. It is fairly long."
-        )
+        mock_section_target.text = "This is the text of the target section. It is fairly long."
         mock_section_target.sections = []
 
         mock_page = Mock()
@@ -325,9 +308,7 @@ class TestWikipediaClient:
         mock_page.sections = [mock_section_target]
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
-            summary = self.client.summarize_section(
-                "Test Page", "Target Section", max_length=20
-            )
+            summary = self.client.summarize_section("Test Page", "Target Section", max_length=20)
 
         assert summary == "This is the text of ..."
         assert len(summary) <= 20 + 3
@@ -361,9 +342,7 @@ class TestWikipediaClient:
         mock_page = Mock()
         mock_page.exists.return_value = True
         mock_page.title = "Test Page"
-        mock_page.summary = (
-            "Fact one. Fact two. Fact three. Fact four. Fact five. Fact six."
-        )
+        mock_page.summary = "Fact one. Fact two. Fact three. Fact four. Fact five. Fact six."
         mock_page.sections = []
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
@@ -378,9 +357,7 @@ class TestWikipediaClient:
         """Test successful fact extraction from a specific section."""
         mock_target_section = Mock()
         mock_target_section.title = "Key Info"
-        mock_target_section.text = (
-            "Important fact A. Important fact B. Important fact C."
-        )
+        mock_target_section.text = "Important fact A. Important fact B. Important fact C."
         mock_target_section.sections = []
 
         mock_page = Mock()
@@ -390,9 +367,7 @@ class TestWikipediaClient:
         mock_page.sections = [mock_target_section]
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
-            facts = self.client.extract_facts(
-                "Test Page", topic_within_article="Key Info", count=2
-            )
+            facts = self.client.extract_facts("Test Page", topic_within_article="Key Info", count=2)
 
         assert len(facts) == 2
         assert facts[0] == "Important fact A."
@@ -407,9 +382,7 @@ class TestWikipediaClient:
         mock_page.sections = []  # No sections defined
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
-            facts = self.client.extract_facts(
-                "Test Page", topic_within_article="Missing Section", count=1
-            )
+            facts = self.client.extract_facts("Test Page", topic_within_article="Missing Section", count=1)
 
         assert len(facts) == 1
         assert facts[0] == "Summary fact 1."
@@ -448,33 +421,25 @@ class TestMCPServerTools:
     def test_create_server_with_language(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with the specified language."""
         create_server(language="ja")
-        MockWikipediaClient.assert_called_once_with(
-            language="ja", country=None, enable_cache=False, access_token=None
-        )
+        MockWikipediaClient.assert_called_once_with(language="ja", country=None, enable_cache=False, access_token=None)
 
     @patch("wikipedia_mcp.server.WikipediaClient")
     def test_create_server_default_language(self, MockWikipediaClient):
         """Test that create_server uses 'en' if no language is specified."""
         create_server()
-        MockWikipediaClient.assert_called_once_with(
-            language="en", country=None, enable_cache=False, access_token=None
-        )
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False, access_token=None)
 
     @patch("wikipedia_mcp.server.WikipediaClient")
     def test_create_server_with_cache_enabled(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with caching enabled."""
         create_server(language="en", enable_cache=True)
-        MockWikipediaClient.assert_called_once_with(
-            language="en", country=None, enable_cache=True, access_token=None
-        )
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=True, access_token=None)
 
     @patch("wikipedia_mcp.server.WikipediaClient")
     def test_create_server_with_cache_disabled(self, MockWikipediaClient):
         """Test that create_server initializes WikipediaClient with caching disabled by default."""
         create_server(language="en", enable_cache=False)
-        MockWikipediaClient.assert_called_once_with(
-            language="en", country=None, enable_cache=False, access_token=None
-        )
+        MockWikipediaClient.assert_called_once_with(language="en", country=None, enable_cache=False, access_token=None)
 
     def test_search_wikipedia_tool(self):
         """Test search_wikipedia tool registration."""

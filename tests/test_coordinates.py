@@ -73,9 +73,7 @@ class TestWikipediaClientCoordinates:
         # Mock API response for article without coordinates
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
-        mock_response.json.return_value = {
-            "query": {"pages": {"789012": {"pageid": 789012, "title": "Test Article"}}}
-        }
+        mock_response.json.return_value = {"query": {"pages": {"789012": {"pageid": 789012, "title": "Test Article"}}}}
         mock_get.return_value = mock_response
 
         result = self.client.get_coordinates("Test Article")
@@ -94,9 +92,7 @@ class TestWikipediaClientCoordinates:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
-            "query": {
-                "pages": {"-1": {"title": "Non-existent Article", "missing": True}}
-            }
+            "query": {"pages": {"-1": {"title": "Non-existent Article", "missing": True}}}
         }
         mock_get.return_value = mock_response
 
@@ -207,9 +203,7 @@ class TestWikipediaClientCoordinates:
                         "123": {
                             "pageid": 123,
                             "title": "测试文章",
-                            "coordinates": [
-                                {"lat": 39.9042, "lon": 116.4074, "primary": True}
-                            ],
+                            "coordinates": [{"lat": 39.9042, "lon": 116.4074, "primary": True}],
                         }
                     }
                 }
@@ -250,9 +244,7 @@ class TestServerCoordinatesTool:
     async def test_get_coordinates_tool_execution(self):
         """Test execution of get_coordinates tool."""
         # Mock the client method
-        with patch(
-            "wikipedia_mcp.wikipedia_client.WikipediaClient.get_coordinates"
-        ) as mock_get_coordinates:
+        with patch("wikipedia_mcp.wikipedia_client.WikipediaClient.get_coordinates") as mock_get_coordinates:
             mock_get_coordinates.return_value = {
                 "title": "Test Location",
                 "pageid": 123,

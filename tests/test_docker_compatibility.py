@@ -67,6 +67,4 @@ class TestDockerCompatibility:
 
         # Should contain the same version
         expected_label = f'LABEL org.opencontainers.image.version="{pyproject_version}"'
-        assert (
-            expected_label in dockerfile_content
-        ), f"Dockerfile should contain {expected_label}"
+        assert expected_label in dockerfile_content, f"Dockerfile should contain {expected_label}"

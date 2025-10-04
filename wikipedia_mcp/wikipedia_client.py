@@ -295,9 +295,7 @@ class WikipediaClient:
         self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
 
         # Parse language and variant
-        self.base_language, self.language_variant = self._parse_language_variant(
-            self.resolved_language
-        )
+        self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
 
         # Use base language for API and library initialization
         self.wiki = wikipediaapi.Wikipedia(
@@ -313,19 +311,11 @@ class WikipediaClient:
             self.get_summary = functools.lru_cache(maxsize=128)(self.get_summary)
             self.get_sections = functools.lru_cache(maxsize=128)(self.get_sections)
             self.get_links = functools.lru_cache(maxsize=128)(self.get_links)
-            self.get_related_topics = functools.lru_cache(maxsize=128)(
-                self.get_related_topics
-            )
-            self.summarize_for_query = functools.lru_cache(maxsize=128)(
-                self.summarize_for_query
-            )
-            self.summarize_section = functools.lru_cache(maxsize=128)(
-                self.summarize_section
-            )
+            self.get_related_topics = functools.lru_cache(maxsize=128)(self.get_related_topics)
+            self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
+            self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
-            self.get_coordinates = functools.lru_cache(maxsize=128)(
-                self.get_coordinates
-            )
+            self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)
 
     def _resolve_country_to_language(self, country: str) -> str:
         """Resolve country/locale code to language code.
@@ -483,9 +473,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
 
         try:
-            logger.debug(
-                "Making search request to %s with params %s", self.api_url, params
-            )
+            logger.debug("Making search request to %s with params %s", self.api_url, params)
             response = requests.get(
                 self.api_url,
                 headers=self._get_request_headers(),
@@ -506,9 +494,7 @@ class WikipediaClient:
 
             if "warnings" in data:
                 for warning_type, warning_body in data["warnings"].items():
-                    logger.warning(
-                        "Wikipedia API warning (%s): %s", warning_type, warning_body
-                    )
+                    logger.warning("Wikipedia API warning (%s): %s", warning_type, warning_body)
 
             query_data = data.get("query", {})
             search_results = query_data.get("search", [])
@@ -538,32 +524,22 @@ class WikipediaClient:
             return results
 
         except requests.exceptions.Timeout as exc:
-            logger.error(
-                "Search request timed out for query '%s': %s", trimmed_query, exc
-            )
+            logger.error("Search request timed out for query '%s': %s", trimmed_query, exc)
             return []
         except requests.exceptions.ConnectionError as exc:
-            logger.error(
-                "Connection error when searching for '%s': %s", trimmed_query, exc
-            )
+            logger.error("Connection error when searching for '%s': %s", trimmed_query, exc)
             return []
         except requests.exceptions.HTTPError as exc:
             logger.error("HTTP error when searching for '%s': %s", trimmed_query, exc)
             return []
         except requests.exceptions.RequestException as exc:
-            logger.error(
-                "Request error when searching for '%s': %s", trimmed_query, exc
-            )
+            logger.error("Request error when searching for '%s': %s", trimmed_query, exc)
             return []
         except ValueError as exc:
-            logger.error(
-                "JSON decode error when searching for '%s': %s", trimmed_query, exc
-            )
+            logger.error("JSON decode error when searching for '%s': %s", trimmed_query, exc)
             return []
         except Exception as exc:  # pragma: no cover - unexpected safeguard
-            logger.error(
-                "Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc
-            )
+            logger.error("Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc)
             return []
 
     def get_article(self, title: str) -> Dict[str, Any]:
@@ -698,9 +674,7 @@ class WikipediaClient:
                         {
                             "title": link,
                             "summary": (
-                                link_page.summary[:200] + "..."
-                                if len(link_page.summary) > 200
-                                else link_page.summary
+                                link_page.summary[:200] + "..." if len(link_page.summary) > 200 else link_page.summary
                             ),
                             "url": link_page.fullurl,
                             "type": "link",
@@ -774,36 +748,24 @@ class WikipediaClient:
                 summary_part = page.summary[:max_length]
                 if not summary_part:
                     summary_part = text_content[:max_length]
-                return (
-                    summary_part + "..."
-                    if len(summary_part) >= max_length
-                    else summary_part
-                )
+                return summary_part + "..." if len(summary_part) >= max_length else summary_part
 
             # Try to get context around the query
             context_start = max(0, start_index - (max_length // 2))
-            context_end = min(
-                len(text_content), start_index + len(query) + (max_length // 2)
-            )
+            context_end = min(len(text_content), start_index + len(query) + (max_length // 2))
 
             snippet = text_content[context_start:context_end]
 
             if len(snippet) > max_length:
                 snippet = snippet[:max_length]
 
-            return (
-                snippet + "..."
-                if len(snippet) >= max_length or context_end < len(text_content)
-                else snippet
-            )
+            return snippet + "..." if len(snippet) >= max_length or context_end < len(text_content) else snippet
 
         except Exception as e:
             logger.error(f"Error generating query-focused summary for '{title}': {e}")
             return f"Error generating query-focused summary for '{title}': {str(e)}"
 
-    def summarize_section(
-        self, title: str, section_title: str, max_length: int = 150
-    ) -> str:
+    def summarize_section(self, title: str, section_title: str, max_length: int = 150) -> str:
         """
         Get a summary of a specific section of a Wikipedia article.
 
@@ -828,9 +790,7 @@ class WikipediaClient:
                     if sec.title.lower() == target_title.lower():
                         return sec
                     # Check subsections
-                    found_in_subsection = find_section_recursive(
-                        sec.sections, target_title
-                    )
+                    found_in_subsection = find_section_recursive(sec.sections, target_title)
                     if found_in_subsection:
                         return found_in_subsection
                 return None
@@ -844,14 +804,10 @@ class WikipediaClient:
             return summary + "..." if len(target_section.text) > max_length else summary
 
         except Exception as e:
-            logger.error(
-                f"Error summarizing section '{section_title}' for article '{title}': {e}"
-            )
+            logger.error(f"Error summarizing section '{section_title}' for article '{title}': {e}")
             return f"Error summarizing section '{section_title}': {str(e)}"
 
-    def extract_facts(
-        self, title: str, topic_within_article: Optional[str] = None, count: int = 5
-    ) -> List[str]:
+    def extract_facts(self, title: str, topic_within_article: Optional[str] = None, count: int = 5) -> List[str]:
         """
         Extract key facts from a Wikipedia article.
         This is a simplified implementation returning the first few sentences of the summary
@@ -877,16 +833,12 @@ class WikipediaClient:
                     for sec in sections_list:
                         if sec.title.lower() == target_title.lower():
                             return sec.text
-                        found_in_subsection = find_section_text_recursive(
-                            sec.sections, target_title
-                        )
+                        found_in_subsection = find_section_text_recursive(sec.sections, target_title)
                         if found_in_subsection:
                             return found_in_subsection
                     return None
 
-                section_text = find_section_text_recursive(
-                    page.sections, topic_within_article
-                )
+                section_text = find_section_text_recursive(page.sections, topic_within_article)
                 if section_text:
                     text_to_process = section_text
                 else:
@@ -906,9 +858,7 @@ class WikipediaClient:
                 if sentence:  # Ensure not an empty string after strip
                     facts.append(sentence + ".")  # Add back the period
 
-            return (
-                facts if facts else ["Could not extract facts from the provided text."]
-            )
+            return facts if facts else ["Could not extract facts from the provided text."]
 
         except Exception as e:
             logger.error(f"Error extracting key facts for '{title}': {e}")
@@ -934,9 +884,7 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
 
         try:
-            response = requests.get(
-                self.api_url, headers=self._get_request_headers(), params=params
-            )
+            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
             response.raise_for_status()
             data = response.json()
 

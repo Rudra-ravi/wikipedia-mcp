@@ -37,9 +37,7 @@ class TestCountryCLI:
 
         assert result.returncode == 0
         assert "Supported Country/Locale Codes:" in result.stdout
-        assert (
-            "en: US, USA, United States, UK, GB" in result.stdout
-        )  # Updated expectation
+        assert "en: US, USA, United States, UK, GB" in result.stdout  # Updated expectation
         assert "zh-hans: CN, China" in result.stdout
         assert "zh-tw: TW, Taiwan" in result.stdout
         assert "Examples:" in result.stdout
@@ -172,10 +170,7 @@ class TestCLICountryIntegration:
             stdout, stderr = process.communicate(timeout=5)
 
             # Check that Taiwan country was properly logged
-            assert (
-                "Starting Wikipedia MCP server with stdio transport for country: Taiwan"
-                in stderr
-            )
+            assert "Starting Wikipedia MCP server with stdio transport for country: Taiwan" in stderr
 
         except subprocess.TimeoutExpired:
             if process:
@@ -209,9 +204,7 @@ class TestCLICountryIntegration:
 
             # Check if process is still running
             poll_result = process.poll()
-            assert (
-                poll_result is None
-            ), "Server with country and cache should start successfully"
+            assert poll_result is None, "Server with country and cache should start successfully"
 
         finally:
             if process and process.poll() is None:
@@ -247,9 +240,7 @@ class TestCLICountryIntegration:
 
             # Check if process is still running
             poll_result = process.poll()
-            assert (
-                poll_result is None
-            ), "Server with country and SSE transport should start successfully"
+            assert poll_result is None, "Server with country and SSE transport should start successfully"
 
         finally:
             if process and process.poll() is None:
@@ -301,9 +292,7 @@ class TestCLICountryExamples:
 
             # Check if process is still running (successful start)
             poll_result = process.poll()
-            assert (
-                poll_result is None
-            ), f"Server should start successfully with country: {country}"
+            assert poll_result is None, f"Server should start successfully with country: {country}"
 
         finally:
             if process and process.poll() is None:

@@ -30,9 +30,7 @@ class TestCountryToLanguageMapping:
 
         for country, expected_lang in test_cases:
             result = client._resolve_country_to_language(country)
-            assert (
-                result == expected_lang
-            ), f"Failed for {country}: expected {expected_lang}, got {result}"
+            assert result == expected_lang, f"Failed for {country}: expected {expected_lang}, got {result}"
 
     def test_resolve_country_to_language_full_names(self):
         """Test country full name resolution."""
@@ -53,9 +51,7 @@ class TestCountryToLanguageMapping:
 
         for country, expected_lang in test_cases:
             result = client._resolve_country_to_language(country)
-            assert (
-                result == expected_lang
-            ), f"Failed for {country}: expected {expected_lang}, got {result}"
+            assert result == expected_lang, f"Failed for {country}: expected {expected_lang}, got {result}"
 
     def test_resolve_country_case_insensitive(self):
         """Test that country resolution is case insensitive."""
@@ -73,9 +69,7 @@ class TestCountryToLanguageMapping:
 
         for country, expected_lang in test_cases:
             result = client._resolve_country_to_language(country)
-            assert (
-                result == expected_lang
-            ), f"Failed for {country}: expected {expected_lang}, got {result}"
+            assert result == expected_lang, f"Failed for {country}: expected {expected_lang}, got {result}"
 
     def test_resolve_country_invalid_code(self):
         """Test error handling for invalid country codes."""
@@ -102,9 +96,7 @@ class TestCountryToLanguageMapping:
 
         for country, expected_lang in test_cases:
             result = client._resolve_country_to_language(country)
-            assert (
-                result == expected_lang
-            ), f"Failed for '{country}': expected {expected_lang}, got {result}"
+            assert result == expected_lang, f"Failed for '{country}': expected {expected_lang}, got {result}"
 
 
 class TestWikipediaClientCountrySupport:
@@ -251,9 +243,7 @@ class TestCountryMappingCompleteness:
 
         for country, language in client.COUNTRY_TO_LANGUAGE.items():
             assert isinstance(country, str), f"Country key must be string: {country}"
-            assert isinstance(
-                language, str
-            ), f"Language value must be string: {language}"
+            assert isinstance(language, str), f"Language value must be string: {language}"
             assert len(country) > 0, f"Country cannot be empty: {country}"
             assert len(language) > 0, f"Language cannot be empty: {language}"
 
@@ -286,9 +276,7 @@ class TestCountryMappingCompleteness:
         ]
 
         for country in major_countries:
-            assert (
-                country in client.COUNTRY_TO_LANGUAGE
-            ), f"Major country missing: {country}"
+            assert country in client.COUNTRY_TO_LANGUAGE, f"Major country missing: {country}"
 
     def test_language_variants_consistency(self):
         """Test that country mappings are consistent with language variants."""
@@ -314,9 +302,7 @@ class TestCountryMappingCompleteness:
         english_countries = ["US", "UK", "CA", "AU", "NZ", "IE", "ZA"]
 
         for country in english_countries:
-            assert (
-                client.COUNTRY_TO_LANGUAGE[country] == "en"
-            ), f"{country} should map to 'en'"
+            assert client.COUNTRY_TO_LANGUAGE[country] == "en", f"{country} should map to 'en'"
 
     def test_no_duplicate_country_names(self):
         """Test that there are no conflicting country names."""

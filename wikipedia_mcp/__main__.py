@@ -38,10 +38,7 @@ def main():
         type=str,
         default="stdio",
         choices=["stdio", "sse"],
-        help=(
-            "Transport protocol for MCP communication "
-            "(stdio for Claude Desktop, sse for HTTP streaming)"
-        ),
+        help=("Transport protocol for MCP communication " "(stdio for Claude Desktop, sse for HTTP streaming)"),
     )
     parser.add_argument(
         "--language",
@@ -127,9 +124,7 @@ def main():
 
     # Validate that both --language and --country are not provided (when language is explicitly set)
     if args.country and getattr(args, "_language_explicitly_set", False):
-        print(
-            "Error: Cannot specify both --language and --country. Use one or the other."
-        )
+        print("Error: Cannot specify both --language and --country. Use one or the other.")
         parser.print_help()
         return
 
@@ -189,12 +184,8 @@ def main():
             config_template,
         )
     else:
-        logger.info(
-            "Using stdio transport - suppressing direct stdout messages for MCP communication."
-        )
-        logger.info(
-            "To use with Claude Desktop, ensure 'wikipedia-mcp' command is in your claude_desktop_config.json."
-        )
+        logger.info("Using stdio transport - suppressing direct stdout messages for MCP communication.")
+        logger.info("To use with Claude Desktop, ensure 'wikipedia-mcp' command is in your claude_desktop_config.json.")
 
     if args.transport == "sse":
         logger.info("Starting SSE server on %s:%d", args.host, args.port)
