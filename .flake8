@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203, W503
+
+per-file-ignores =
+    tests/*:F401,W291,W292,W293,E261,E111,E114,E117
+
