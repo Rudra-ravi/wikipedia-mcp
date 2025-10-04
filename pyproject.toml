@@ -54,3 +54,8 @@ packages.find.where = ["."]
 packages.find.include = ["wikipedia_mcp*"]
 package-data.wikipedia_mcp = ["py.typed"]
 license-files = ["LICENSE"] 
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+exclude = "^tests/"
