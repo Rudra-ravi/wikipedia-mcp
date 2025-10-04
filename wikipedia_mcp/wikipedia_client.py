@@ -18,148 +18,252 @@ class WikipediaClient:
 
     # Language variant mappings - maps variant codes to their base language
     LANGUAGE_VARIANTS = {
-        'zh-hans': 'zh',  # Simplified Chinese
-        'zh-hant': 'zh',  # Traditional Chinese
-        'zh-tw': 'zh',    # Traditional Chinese (Taiwan)
-        'zh-hk': 'zh',    # Traditional Chinese (Hong Kong)
-        'zh-mo': 'zh',    # Traditional Chinese (Macau)
-        'zh-cn': 'zh',    # Simplified Chinese (China)
-        'zh-sg': 'zh',    # Simplified Chinese (Singapore)
-        'zh-my': 'zh',    # Simplified Chinese (Malaysia)
+        "zh-hans": "zh",  # Simplified Chinese
+        "zh-hant": "zh",  # Traditional Chinese
+        "zh-tw": "zh",  # Traditional Chinese (Taiwan)
+        "zh-hk": "zh",  # Traditional Chinese (Hong Kong)
+        "zh-mo": "zh",  # Traditional Chinese (Macau)
+        "zh-cn": "zh",  # Simplified Chinese (China)
+        "zh-sg": "zh",  # Simplified Chinese (Singapore)
+        "zh-my": "zh",  # Simplified Chinese (Malaysia)
         # Add more language variants as needed
         # Serbian variants
-        'sr-latn': 'sr',  # Serbian Latin
-        'sr-cyrl': 'sr',  # Serbian Cyrillic
+        "sr-latn": "sr",  # Serbian Latin
+        "sr-cyrl": "sr",  # Serbian Cyrillic
         # Norwegian variants
-        'no': 'nb',       # Norwegian Bokmål (default)
+        "no": "nb",  # Norwegian Bokmål (default)
         # Kurdish variants
-        'ku-latn': 'ku',  # Kurdish Latin
-        'ku-arab': 'ku',  # Kurdish Arabic
+        "ku-latn": "ku",  # Kurdish Latin
+        "ku-arab": "ku",  # Kurdish Arabic
     }
 
     # Country/locale to language code mappings
     COUNTRY_TO_LANGUAGE = {
         # English-speaking countries
-        'US': 'en', 'USA': 'en', 'United States': 'en',
-        'UK': 'en', 'GB': 'en', 'United Kingdom': 'en',
-        'CA': 'en', 'Canada': 'en',
-        'AU': 'en', 'Australia': 'en',
-        'NZ': 'en', 'New Zealand': 'en',
-        'IE': 'en', 'Ireland': 'en',
-        'ZA': 'en', 'South Africa': 'en',
-
+        "US": "en",
+        "USA": "en",
+        "United States": "en",
+        "UK": "en",
+        "GB": "en",
+        "United Kingdom": "en",
+        "CA": "en",
+        "Canada": "en",
+        "AU": "en",
+        "Australia": "en",
+        "NZ": "en",
+        "New Zealand": "en",
+        "IE": "en",
+        "Ireland": "en",
+        "ZA": "en",
+        "South Africa": "en",
         # Chinese-speaking countries/regions
-        'CN': 'zh-hans', 'China': 'zh-hans',
-        'TW': 'zh-tw', 'Taiwan': 'zh-tw',
-        'HK': 'zh-hk', 'Hong Kong': 'zh-hk',
-        'MO': 'zh-mo', 'Macau': 'zh-mo',
-        'SG': 'zh-sg', 'Singapore': 'zh-sg',
-        'MY': 'zh-my', 'Malaysia': 'zh-my',
-
+        "CN": "zh-hans",
+        "China": "zh-hans",
+        "TW": "zh-tw",
+        "Taiwan": "zh-tw",
+        "HK": "zh-hk",
+        "Hong Kong": "zh-hk",
+        "MO": "zh-mo",
+        "Macau": "zh-mo",
+        "SG": "zh-sg",
+        "Singapore": "zh-sg",
+        "MY": "zh-my",
+        "Malaysia": "zh-my",
         # Major European countries
-        'DE': 'de', 'Germany': 'de',
-        'FR': 'fr', 'France': 'fr',
-        'ES': 'es', 'Spain': 'es',
-        'IT': 'it', 'Italy': 'it',
-        'PT': 'pt', 'Portugal': 'pt',
-        'NL': 'nl', 'Netherlands': 'nl',
-        'PL': 'pl', 'Poland': 'pl',
-        'RU': 'ru', 'Russia': 'ru',
-        'UA': 'uk', 'Ukraine': 'uk',
-        'TR': 'tr', 'Turkey': 'tr',
-        'GR': 'el', 'Greece': 'el',
-        'SE': 'sv', 'Sweden': 'sv',
-        'NO': 'no', 'Norway': 'no',
-        'DK': 'da', 'Denmark': 'da',
-        'FI': 'fi', 'Finland': 'fi',
-        'IS': 'is', 'Iceland': 'is',
-        'CZ': 'cs', 'Czech Republic': 'cs',
-        'SK': 'sk', 'Slovakia': 'sk',
-        'HU': 'hu', 'Hungary': 'hu',
-        'RO': 'ro', 'Romania': 'ro',
-        'BG': 'bg', 'Bulgaria': 'bg',
-        'HR': 'hr', 'Croatia': 'hr',
-        'SI': 'sl', 'Slovenia': 'sl',
-        'RS': 'sr', 'Serbia': 'sr',
-        'BA': 'bs', 'Bosnia and Herzegovina': 'bs',
-        'MK': 'mk', 'Macedonia': 'mk',
-        'AL': 'sq', 'Albania': 'sq',
-        'MT': 'mt', 'Malta': 'mt',
-
+        "DE": "de",
+        "Germany": "de",
+        "FR": "fr",
+        "France": "fr",
+        "ES": "es",
+        "Spain": "es",
+        "IT": "it",
+        "Italy": "it",
+        "PT": "pt",
+        "Portugal": "pt",
+        "NL": "nl",
+        "Netherlands": "nl",
+        "PL": "pl",
+        "Poland": "pl",
+        "RU": "ru",
+        "Russia": "ru",
+        "UA": "uk",
+        "Ukraine": "uk",
+        "TR": "tr",
+        "Turkey": "tr",
+        "GR": "el",
+        "Greece": "el",
+        "SE": "sv",
+        "Sweden": "sv",
+        "NO": "no",
+        "Norway": "no",
+        "DK": "da",
+        "Denmark": "da",
+        "FI": "fi",
+        "Finland": "fi",
+        "IS": "is",
+        "Iceland": "is",
+        "CZ": "cs",
+        "Czech Republic": "cs",
+        "SK": "sk",
+        "Slovakia": "sk",
+        "HU": "hu",
+        "Hungary": "hu",
+        "RO": "ro",
+        "Romania": "ro",
+        "BG": "bg",
+        "Bulgaria": "bg",
+        "HR": "hr",
+        "Croatia": "hr",
+        "SI": "sl",
+        "Slovenia": "sl",
+        "RS": "sr",
+        "Serbia": "sr",
+        "BA": "bs",
+        "Bosnia and Herzegovina": "bs",
+        "MK": "mk",
+        "Macedonia": "mk",
+        "AL": "sq",
+        "Albania": "sq",
+        "MT": "mt",
+        "Malta": "mt",
         # Asian countries
-        'JP': 'ja', 'Japan': 'ja',
-        'KR': 'ko', 'South Korea': 'ko',
-        'IN': 'hi', 'India': 'hi',
-        'TH': 'th', 'Thailand': 'th',
-        'VN': 'vi', 'Vietnam': 'vi',
-        'ID': 'id', 'Indonesia': 'id',
-        'PH': 'tl', 'Philippines': 'tl',
-        'BD': 'bn', 'Bangladesh': 'bn',
-        'PK': 'ur', 'Pakistan': 'ur',
-        'LK': 'si', 'Sri Lanka': 'si',
-        'MM': 'my', 'Myanmar': 'my',
-        'KH': 'km', 'Cambodia': 'km',
-        'LA': 'lo', 'Laos': 'lo',
-        'MN': 'mn', 'Mongolia': 'mn',
-        'KZ': 'kk', 'Kazakhstan': 'kk',
-        'UZ': 'uz', 'Uzbekistan': 'uz',
-        'AF': 'fa', 'Afghanistan': 'fa',
-
+        "JP": "ja",
+        "Japan": "ja",
+        "KR": "ko",
+        "South Korea": "ko",
+        "IN": "hi",
+        "India": "hi",
+        "TH": "th",
+        "Thailand": "th",
+        "VN": "vi",
+        "Vietnam": "vi",
+        "ID": "id",
+        "Indonesia": "id",
+        "PH": "tl",
+        "Philippines": "tl",
+        "BD": "bn",
+        "Bangladesh": "bn",
+        "PK": "ur",
+        "Pakistan": "ur",
+        "LK": "si",
+        "Sri Lanka": "si",
+        "MM": "my",
+        "Myanmar": "my",
+        "KH": "km",
+        "Cambodia": "km",
+        "LA": "lo",
+        "Laos": "lo",
+        "MN": "mn",
+        "Mongolia": "mn",
+        "KZ": "kk",
+        "Kazakhstan": "kk",
+        "UZ": "uz",
+        "Uzbekistan": "uz",
+        "AF": "fa",
+        "Afghanistan": "fa",
         # Middle Eastern countries
-        'IR': 'fa', 'Iran': 'fa',
-        'SA': 'ar', 'Saudi Arabia': 'ar',
-        'AE': 'ar', 'UAE': 'ar',
-        'EG': 'ar', 'Egypt': 'ar',
-        'IQ': 'ar', 'Iraq': 'ar',
-        'SY': 'ar', 'Syria': 'ar',
-        'JO': 'ar', 'Jordan': 'ar',
-        'LB': 'ar', 'Lebanon': 'ar',
-        'IL': 'he', 'Israel': 'he',
-
+        "IR": "fa",
+        "Iran": "fa",
+        "SA": "ar",
+        "Saudi Arabia": "ar",
+        "AE": "ar",
+        "UAE": "ar",
+        "EG": "ar",
+        "Egypt": "ar",
+        "IQ": "ar",
+        "Iraq": "ar",
+        "SY": "ar",
+        "Syria": "ar",
+        "JO": "ar",
+        "Jordan": "ar",
+        "LB": "ar",
+        "Lebanon": "ar",
+        "IL": "he",
+        "Israel": "he",
         # African countries
-        'MA': 'ar', 'Morocco': 'ar',
-        'DZ': 'ar', 'Algeria': 'ar',
-        'TN': 'ar', 'Tunisia': 'ar',
-        'LY': 'ar', 'Libya': 'ar',
-        'SD': 'ar', 'Sudan': 'ar',
-        'ET': 'am', 'Ethiopia': 'am',
-        'KE': 'sw', 'Kenya': 'sw',
-        'TZ': 'sw', 'Tanzania': 'sw',
-        'NG': 'ha', 'Nigeria': 'ha',
-        'GH': 'en', 'Ghana': 'en',
-
+        "MA": "ar",
+        "Morocco": "ar",
+        "DZ": "ar",
+        "Algeria": "ar",
+        "TN": "ar",
+        "Tunisia": "ar",
+        "LY": "ar",
+        "Libya": "ar",
+        "SD": "ar",
+        "Sudan": "ar",
+        "ET": "am",
+        "Ethiopia": "am",
+        "KE": "sw",
+        "Kenya": "sw",
+        "TZ": "sw",
+        "Tanzania": "sw",
+        "NG": "ha",
+        "Nigeria": "ha",
+        "GH": "en",
+        "Ghana": "en",
         # Latin American countries
-        'MX': 'es', 'Mexico': 'es',
-        'AR': 'es', 'Argentina': 'es',
-        'CO': 'es', 'Colombia': 'es',
-        'VE': 'es', 'Venezuela': 'es',
-        'PE': 'es', 'Peru': 'es',
-        'CL': 'es', 'Chile': 'es',
-        'EC': 'es', 'Ecuador': 'es',
-        'BO': 'es', 'Bolivia': 'es',
-        'PY': 'es', 'Paraguay': 'es',
-        'UY': 'es', 'Uruguay': 'es',
-        'CR': 'es', 'Costa Rica': 'es',
-        'PA': 'es', 'Panama': 'es',
-        'GT': 'es', 'Guatemala': 'es',
-        'HN': 'es', 'Honduras': 'es',
-        'SV': 'es', 'El Salvador': 'es',
-        'NI': 'es', 'Nicaragua': 'es',
-        'CU': 'es', 'Cuba': 'es',
-        'DO': 'es', 'Dominican Republic': 'es',
-        'BR': 'pt', 'Brazil': 'pt',
-
+        "MX": "es",
+        "Mexico": "es",
+        "AR": "es",
+        "Argentina": "es",
+        "CO": "es",
+        "Colombia": "es",
+        "VE": "es",
+        "Venezuela": "es",
+        "PE": "es",
+        "Peru": "es",
+        "CL": "es",
+        "Chile": "es",
+        "EC": "es",
+        "Ecuador": "es",
+        "BO": "es",
+        "Bolivia": "es",
+        "PY": "es",
+        "Paraguay": "es",
+        "UY": "es",
+        "Uruguay": "es",
+        "CR": "es",
+        "Costa Rica": "es",
+        "PA": "es",
+        "Panama": "es",
+        "GT": "es",
+        "Guatemala": "es",
+        "HN": "es",
+        "Honduras": "es",
+        "SV": "es",
+        "El Salvador": "es",
+        "NI": "es",
+        "Nicaragua": "es",
+        "CU": "es",
+        "Cuba": "es",
+        "DO": "es",
+        "Dominican Republic": "es",
+        "BR": "pt",
+        "Brazil": "pt",
         # Additional countries
-        'BY': 'be', 'Belarus': 'be',
-        'EE': 'et', 'Estonia': 'et',
-        'LV': 'lv', 'Latvia': 'lv',
-        'LT': 'lt', 'Lithuania': 'lt',
-        'GE': 'ka', 'Georgia': 'ka',
-        'AM': 'hy', 'Armenia': 'hy',
-        'AZ': 'az', 'Azerbaijan': 'az',
+        "BY": "be",
+        "Belarus": "be",
+        "EE": "et",
+        "Estonia": "et",
+        "LV": "lv",
+        "Latvia": "lv",
+        "LT": "lt",
+        "Lithuania": "lt",
+        "GE": "ka",
+        "Georgia": "ka",
+        "AM": "hy",
+        "Armenia": "hy",
+        "AZ": "az",
+        "Azerbaijan": "az",
     }
 
-    def __init__(self, language: str = "en", country: Optional[str] = None, enable_cache: bool = False, access_token: Optional[str] = None):
+    def __init__(
+        self,
+        language: str = "en",
+        country: Optional[str] = None,
+        enable_cache: bool = False,
+        access_token: Optional[str] = None,
+    ):
         """Initialize the Wikipedia client.
 
         Args:
@@ -191,13 +295,15 @@ class WikipediaClient:
         self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
 
         # Parse language and variant
-        self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
+        self.base_language, self.language_variant = self._parse_language_variant(
+            self.resolved_language
+        )
 
         # Use base language for API and library initialization
         self.wiki = wikipediaapi.Wikipedia(
             user_agent=self.user_agent,
             language=self.base_language,
-            extract_format=wikipediaapi.ExtractFormat.WIKI
+            extract_format=wikipediaapi.ExtractFormat.WIKI,
         )
         self.api_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
 
@@ -207,11 +313,19 @@ class WikipediaClient:
             self.get_summary = functools.lru_cache(maxsize=128)(self.get_summary)
             self.get_sections = functools.lru_cache(maxsize=128)(self.get_sections)
             self.get_links = functools.lru_cache(maxsize=128)(self.get_links)
-            self.get_related_topics = functools.lru_cache(maxsize=128)(self.get_related_topics)
-            self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
-            self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
+            self.get_related_topics = functools.lru_cache(maxsize=128)(
+                self.get_related_topics
+            )
+            self.summarize_for_query = functools.lru_cache(maxsize=128)(
+                self.summarize_for_query
+            )
+            self.summarize_section = functools.lru_cache(maxsize=128)(
+                self.summarize_section
+            )
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
-            self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)
+            self.get_coordinates = functools.lru_cache(maxsize=128)(
+                self.get_coordinates
+            )
 
     def _resolve_country_to_language(self, country: str) -> str:
         """Resolve country/locale code to language code.
@@ -273,10 +387,10 @@ class WikipediaClient:
         Returns:
             Dictionary of headers to use for requests.
         """
-        headers = {'User-Agent': self.user_agent}
+        headers = {"User-Agent": self.user_agent}
 
         if self.access_token:
-            headers['Authorization'] = f'Bearer {self.access_token}'
+            headers["Authorization"] = f"Bearer {self.access_token}"
 
         return headers
 
@@ -291,17 +405,17 @@ class WikipediaClient:
         """
         if self.language_variant:
             params = params.copy()
-            params['variant'] = self.language_variant
+            params["variant"] = self.language_variant
         return params
 
     def test_connectivity(self) -> Dict[str, Any]:
         """Test connectivity to the Wikipedia API and return diagnostics."""
         test_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
         test_params = {
-            'action': 'query',
-            'format': 'json',
-            'meta': 'siteinfo',
-            'siprop': 'general'
+            "action": "query",
+            "format": "json",
+            "meta": "siteinfo",
+            "siprop": "general",
         }
 
         try:
@@ -310,20 +424,20 @@ class WikipediaClient:
                 test_url,
                 headers=self._get_request_headers(),
                 params=test_params,
-                timeout=10
+                timeout=10,
             )
             response.raise_for_status()
             data = response.json()
 
-            site_info = data.get('query', {}).get('general', {})
+            site_info = data.get("query", {}).get("general", {})
 
             return {
                 "status": "success",
                 "url": test_url,
                 "language": self.base_language,
-                "site_name": site_info.get('sitename', 'Unknown'),
-                "server": site_info.get('server', 'Unknown'),
-                "response_time_ms": response.elapsed.total_seconds() * 1000
+                "site_name": site_info.get("sitename", "Unknown"),
+                "server": site_info.get("server", "Unknown"),
+                "response_time_ms": response.elapsed.total_seconds() * 1000,
             }
 
         except Exception as exc:  # pragma: no cover - safeguarded
@@ -333,7 +447,7 @@ class WikipediaClient:
                 "url": test_url,
                 "language": self.base_language,
                 "error": str(exc),
-                "error_type": type(exc).__name__
+                "error_type": type(exc).__name__,
             }
 
     def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -344,7 +458,10 @@ class WikipediaClient:
 
         trimmed_query = query.strip()
         if len(trimmed_query) > 300:
-            logger.warning("Search query too long (%d chars), truncating to 300", len(trimmed_query))
+            logger.warning(
+                "Search query too long (%d chars), truncating to 300",
+                len(trimmed_query),
+            )
             trimmed_query = trimmed_query[:300]
 
         if limit <= 0:
@@ -355,78 +472,98 @@ class WikipediaClient:
             limit = 500
 
         params = {
-            'action': 'query',
-            'format': 'json',
-            'list': 'search',
-            'utf8': 1,
-            'srsearch': trimmed_query,
-            'srlimit': limit
+            "action": "query",
+            "format": "json",
+            "list": "search",
+            "utf8": 1,
+            "srsearch": trimmed_query,
+            "srlimit": limit,
         }
 
         params = self._add_variant_to_params(params)
 
         try:
-            logger.debug("Making search request to %s with params %s", self.api_url, params)
+            logger.debug(
+                "Making search request to %s with params %s", self.api_url, params
+            )
             response = requests.get(
                 self.api_url,
                 headers=self._get_request_headers(),
                 params=params,
-                timeout=30
+                timeout=30,
             )
             response.raise_for_status()
             data = response.json()
 
-            if 'error' in data:
-                error_info = data['error']
+            if "error" in data:
+                error_info = data["error"]
                 logger.error(
                     "Wikipedia API error: %s - %s",
-                    error_info.get('code', 'unknown'),
-                    error_info.get('info', 'No details')
+                    error_info.get("code", "unknown"),
+                    error_info.get("info", "No details"),
                 )
                 return []
 
-            if 'warnings' in data:
-                for warning_type, warning_body in data['warnings'].items():
-                    logger.warning("Wikipedia API warning (%s): %s", warning_type, warning_body)
+            if "warnings" in data:
+                for warning_type, warning_body in data["warnings"].items():
+                    logger.warning(
+                        "Wikipedia API warning (%s): %s", warning_type, warning_body
+                    )
 
-            query_data = data.get('query', {})
-            search_results = query_data.get('search', [])
-            logger.info("Search for '%s' returned %d results", trimmed_query, len(search_results))
+            query_data = data.get("query", {})
+            search_results = query_data.get("search", [])
+            logger.info(
+                "Search for '%s' returned %d results",
+                trimmed_query,
+                len(search_results),
+            )
 
             results: List[Dict[str, Any]] = []
             for item in search_results:
-                title = item.get('title')
+                title = item.get("title")
                 if not title:
                     logger.warning("Search result missing title: %s", item)
                     continue
 
-                results.append({
-                    'title': title,
-                    'snippet': item.get('snippet', ''),
-                    'pageid': item.get('pageid', 0),
-                    'wordcount': item.get('wordcount', 0),
-                    'timestamp': item.get('timestamp', '')
-                })
+                results.append(
+                    {
+                        "title": title,
+                        "snippet": item.get("snippet", ""),
+                        "pageid": item.get("pageid", 0),
+                        "wordcount": item.get("wordcount", 0),
+                        "timestamp": item.get("timestamp", ""),
+                    }
+                )
 
             return results
 
         except requests.exceptions.Timeout as exc:
-            logger.error("Search request timed out for query '%s': %s", trimmed_query, exc)
+            logger.error(
+                "Search request timed out for query '%s': %s", trimmed_query, exc
+            )
             return []
         except requests.exceptions.ConnectionError as exc:
-            logger.error("Connection error when searching for '%s': %s", trimmed_query, exc)
+            logger.error(
+                "Connection error when searching for '%s': %s", trimmed_query, exc
+            )
             return []
         except requests.exceptions.HTTPError as exc:
             logger.error("HTTP error when searching for '%s': %s", trimmed_query, exc)
             return []
         except requests.exceptions.RequestException as exc:
-            logger.error("Request error when searching for '%s': %s", trimmed_query, exc)
+            logger.error(
+                "Request error when searching for '%s': %s", trimmed_query, exc
+            )
             return []
         except ValueError as exc:
-            logger.error("JSON decode error when searching for '%s': %s", trimmed_query, exc)
+            logger.error(
+                "JSON decode error when searching for '%s': %s", trimmed_query, exc
+            )
             return []
         except Exception as exc:  # pragma: no cover - unexpected safeguard
-            logger.error("Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc)
+            logger.error(
+                "Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc
+            )
             return []
 
     def get_article(self, title: str) -> Dict[str, Any]:
@@ -442,11 +579,7 @@ class WikipediaClient:
             page = self.wiki.page(title)
 
             if not page.exists():
-                return {
-                    'title': title,
-                    'exists': False,
-                    'error': 'Page does not exist'
-                }
+                return {"title": title, "exists": False, "error": "Page does not exist"}
 
             # Get sections
             sections = self._extract_sections(page.sections)
@@ -458,23 +591,19 @@ class WikipediaClient:
             links = [link for link in page.links.keys()]
 
             return {
-                'title': page.title,
-                'pageid': page.pageid,
-                'summary': page.summary,
-                'text': page.text,
-                'url': page.fullurl,
-                'sections': sections,
-                'categories': categories,
-                'links': links[:100],  # Limit to 100 links to avoid too much data
-                'exists': True
+                "title": page.title,
+                "pageid": page.pageid,
+                "summary": page.summary,
+                "text": page.text,
+                "url": page.fullurl,
+                "sections": sections,
+                "categories": categories,
+                "links": links[:100],  # Limit to 100 links to avoid too much data
+                "exists": True,
             }
         except Exception as e:
             logger.error(f"Error getting Wikipedia article: {e}")
-            return {
-                'title': title,
-                'exists': False,
-                'error': str(e)
-            }
+            return {"title": title, "exists": False, "error": str(e)}
 
     def get_summary(self, title: str) -> str:
         """Get a summary of a Wikipedia article.
@@ -565,12 +694,18 @@ class WikipediaClient:
             for link in links[:limit]:
                 link_page = self.wiki.page(link)
                 if link_page.exists():
-                    related.append({
-                        'title': link,
-                        'summary': link_page.summary[:200] + '...' if len(link_page.summary) > 200 else link_page.summary,
-                        'url': link_page.fullurl,
-                        'type': 'link'
-                    })
+                    related.append(
+                        {
+                            "title": link,
+                            "summary": (
+                                link_page.summary[:200] + "..."
+                                if len(link_page.summary) > 200
+                                else link_page.summary
+                            ),
+                            "url": link_page.fullurl,
+                            "type": "link",
+                        }
+                    )
 
                 if len(related) >= limit:
                     break
@@ -581,10 +716,7 @@ class WikipediaClient:
                 for category in categories[:remaining]:
                     # Remove "Category:" prefix if present
                     clean_category = category.replace("Category:", "")
-                    related.append({
-                        'title': clean_category,
-                        'type': 'category'
-                    })
+                    related.append({"title": clean_category, "type": "category"})
 
             return related
         except Exception as e:
@@ -605,10 +737,10 @@ class WikipediaClient:
 
         for section in sections:
             section_data = {
-                'title': section.title,
-                'level': level,
-                'text': section.text,
-                'sections': self._extract_sections(section.sections, level + 1)
+                "title": section.title,
+                "level": level,
+                "text": section.text,
+                "sections": self._extract_sections(section.sections, level + 1),
             }
             result.append(section_data)
 
@@ -642,25 +774,36 @@ class WikipediaClient:
                 summary_part = page.summary[:max_length]
                 if not summary_part:
                     summary_part = text_content[:max_length]
-                return summary_part + "..." if len(summary_part) >= max_length else summary_part
-
+                return (
+                    summary_part + "..."
+                    if len(summary_part) >= max_length
+                    else summary_part
+                )
 
             # Try to get context around the query
             context_start = max(0, start_index - (max_length // 2))
-            context_end = min(len(text_content), start_index + len(query) + (max_length // 2))
+            context_end = min(
+                len(text_content), start_index + len(query) + (max_length // 2)
+            )
 
             snippet = text_content[context_start:context_end]
 
             if len(snippet) > max_length:
                 snippet = snippet[:max_length]
 
-            return snippet + "..." if len(snippet) >= max_length or context_end < len(text_content) else snippet
+            return (
+                snippet + "..."
+                if len(snippet) >= max_length or context_end < len(text_content)
+                else snippet
+            )
 
         except Exception as e:
             logger.error(f"Error generating query-focused summary for '{title}': {e}")
             return f"Error generating query-focused summary for '{title}': {str(e)}"
 
-    def summarize_section(self, title: str, section_title: str, max_length: int = 150) -> str:
+    def summarize_section(
+        self, title: str, section_title: str, max_length: int = 150
+    ) -> str:
         """
         Get a summary of a specific section of a Wikipedia article.
 
@@ -685,7 +828,9 @@ class WikipediaClient:
                     if sec.title.lower() == target_title.lower():
                         return sec
                     # Check subsections
-                    found_in_subsection = find_section_recursive(sec.sections, target_title)
+                    found_in_subsection = find_section_recursive(
+                        sec.sections, target_title
+                    )
                     if found_in_subsection:
                         return found_in_subsection
                 return None
@@ -699,10 +844,14 @@ class WikipediaClient:
             return summary + "..." if len(target_section.text) > max_length else summary
 
         except Exception as e:
-            logger.error(f"Error summarizing section '{section_title}' for article '{title}': {e}")
+            logger.error(
+                f"Error summarizing section '{section_title}' for article '{title}': {e}"
+            )
             return f"Error summarizing section '{section_title}': {str(e)}"
 
-    def extract_facts(self, title: str, topic_within_article: Optional[str] = None, count: int = 5) -> List[str]:
+    def extract_facts(
+        self, title: str, topic_within_article: Optional[str] = None, count: int = 5
+    ) -> List[str]:
         """
         Extract key facts from a Wikipedia article.
         This is a simplified implementation returning the first few sentences of the summary
@@ -728,12 +877,16 @@ class WikipediaClient:
                     for sec in sections_list:
                         if sec.title.lower() == target_title.lower():
                             return sec.text
-                        found_in_subsection = find_section_text_recursive(sec.sections, target_title)
+                        found_in_subsection = find_section_text_recursive(
+                            sec.sections, target_title
+                        )
                         if found_in_subsection:
                             return found_in_subsection
                     return None
 
-                section_text = find_section_text_recursive(page.sections, topic_within_article)
+                section_text = find_section_text_recursive(
+                    page.sections, topic_within_article
+                )
                 if section_text:
                     text_to_process = section_text
                 else:
@@ -746,14 +899,16 @@ class WikipediaClient:
                 return ["No content found to extract facts from."]
 
             # Basic sentence splitting (can be improved with NLP libraries like nltk or spacy)
-            sentences = [s.strip() for s in text_to_process.split('.') if s.strip()]
+            sentences = [s.strip() for s in text_to_process.split(".") if s.strip()]
 
             facts = []
             for sentence in sentences[:count]:
-                if sentence: # Ensure not an empty string after strip
-                    facts.append(sentence + ".") # Add back the period
+                if sentence:  # Ensure not an empty string after strip
+                    facts.append(sentence + ".")  # Add back the period
 
-            return facts if facts else ["Could not extract facts from the provided text."]
+            return (
+                facts if facts else ["Could not extract facts from the provided text."]
+            )
 
         except Exception as e:
             logger.error(f"Error extracting key facts for '{title}': {e}")
@@ -769,81 +924,85 @@ class WikipediaClient:
             A dictionary containing the coordinates information.
         """
         params = {
-            'action': 'query',
-            'format': 'json',
-            'prop': 'coordinates',
-            'titles': title
+            "action": "query",
+            "format": "json",
+            "prop": "coordinates",
+            "titles": title,
         }
 
         # Add variant parameter if needed
         params = self._add_variant_to_params(params)
 
         try:
-            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
+            response = requests.get(
+                self.api_url, headers=self._get_request_headers(), params=params
+            )
             response.raise_for_status()
             data = response.json()
 
-            pages = data.get('query', {}).get('pages', {})
+            pages = data.get("query", {}).get("pages", {})
 
             if not pages:
                 return {
-                    'title': title,
-                    'coordinates': None,
-                    'exists': False,
-                    'error': 'No page found'
+                    "title": title,
+                    "coordinates": None,
+                    "exists": False,
+                    "error": "No page found",
                 }
 
             # Get the first (and typically only) page
             page_data = next(iter(pages.values()))
 
             # Check if page exists (pageid > 0 means page exists)
-            if page_data.get('pageid', -1) < 0:
+            if page_data.get("pageid", -1) < 0:
                 return {
-                    'title': title,
-                    'coordinates': None,
-                    'exists': False,
-                    'error': 'Page does not exist'
+                    "title": title,
+                    "coordinates": None,
+                    "exists": False,
+                    "error": "Page does not exist",
                 }
 
-            coordinates = page_data.get('coordinates', [])
+            coordinates = page_data.get("coordinates", [])
 
             if not coordinates:
                 return {
-                    'title': page_data.get('title', title),
-                    'pageid': page_data.get('pageid'),
-                    'coordinates': None,
-                    'exists': True,
-                    'error': None,
-                    'message': 'No coordinates available for this article'
+                    "title": page_data.get("title", title),
+                    "pageid": page_data.get("pageid"),
+                    "coordinates": None,
+                    "exists": True,
+                    "error": None,
+                    "message": "No coordinates available for this article",
                 }
 
             # Process coordinates - typically there's one primary coordinate
             processed_coordinates = []
             for coord in coordinates:
-                processed_coordinates.append({
-                    'latitude': coord.get('lat'),
-                    'longitude': coord.get('lon'),
-                    'primary': coord.get('primary', False),
-                    'globe': coord.get('globe', 'earth'),
-                    'type': coord.get('type', ''),
-                    'name': coord.get('name', ''),
-                    'region': coord.get('region', ''),
-                    'country': coord.get('country', '')
-                })
+                processed_coordinates.append(
+                    {
+                        "latitude": coord.get("lat"),
+                        "longitude": coord.get("lon"),
+                        "primary": coord.get("primary", False),
+                        "globe": coord.get("globe", "earth"),
+                        "type": coord.get("type", ""),
+                        "name": coord.get("name", ""),
+                        "region": coord.get("region", ""),
+                        "country": coord.get("country", ""),
+                    }
+                )
 
             return {
-                'title': page_data.get('title', title),
-                'pageid': page_data.get('pageid'),
-                'coordinates': processed_coordinates,
-                'exists': True,
-                'error': None
+                "title": page_data.get("title", title),
+                "pageid": page_data.get("pageid"),
+                "coordinates": processed_coordinates,
+                "exists": True,
+                "error": None,
             }
 
         except Exception as e:
             logger.error(f"Error getting coordinates for Wikipedia article: {e}")
             return {
-                'title': title,
-                'coordinates': None,
-                'exists': False,
-                'error': str(e)
+                "title": title,
+                "coordinates": None,
+                "exists": False,
+                "error": str(e),
             }

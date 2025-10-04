@@ -252,6 +252,15 @@ To find the full path, run: `which wikipedia-mcp`
 
 > **Note**: If you encounter connection errors, see the [Troubleshooting](#common-issues) section for solutions.
 
+## Documentation Index
+
+- CLI usage and options: see [`docs/CLI.md`](docs/CLI.md)
+- API and MCP tools/resources: see [`docs/API.md`](docs/API.md)
+- Architecture overview: see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- User guide and troubleshooting: see [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
+- Development guide: see [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
+- Testing guide: see [`docs/TESTING.md`](docs/TESTING.md)
+
 ## Available MCP Tools
 
 The Wikipedia MCP server provides the following tools for LLMs to interact with Wikipedia:

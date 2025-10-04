@@ -16,7 +16,7 @@ class TestDockerCompatibility:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         assert "--host HOST" in result.stdout
@@ -30,7 +30,7 @@ class TestDockerCompatibility:
             [sys.executable, "-m", "wikipedia_mcp", "--host", "0.0.0.0", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         # If --host was unrecognized, we'd get an error instead of help output
@@ -40,7 +40,7 @@ class TestDockerCompatibility:
         """Test that Dockerfile is configured to build from source (not PyPI)."""
         with open("Dockerfile", "r") as f:
             dockerfile_content = f.read()
-        
+
         # Should copy source and install locally, not install from PyPI
         assert "COPY . ." in dockerfile_content
         assert "pip install --no-cache-dir ." in dockerfile_content
@@ -52,19 +52,21 @@ class TestDockerCompatibility:
         # Read version from pyproject.toml
         with open("pyproject.toml", "r") as f:
             pyproject_content = f.read()
-        
+
         # Extract version from pyproject.toml
-        for line in pyproject_content.split('\n'):
-            if line.startswith('version = '):
+        for line in pyproject_content.split("\n"):
+            if line.startswith("version = "):
                 pyproject_version = line.split('"')[1]
                 break
         else:
             pytest.fail("Could not find version in pyproject.toml")
-        
+
         # Read version from Dockerfile
         with open("Dockerfile", "r") as f:
             dockerfile_content = f.read()
-        
+
         # Should contain the same version
         expected_label = f'LABEL org.opencontainers.image.version="{pyproject_version}"'
-        assert expected_label in dockerfile_content, f"Dockerfile should contain {expected_label}"
+        assert (
+            expected_label in dockerfile_content
+        ), f"Dockerfile should contain {expected_label}"

@@ -22,7 +22,7 @@ class TestPortConfiguration:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         assert "--port PORT" in result.stdout
@@ -34,7 +34,7 @@ class TestPortConfiguration:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert "default: 8000" in result.stdout
 
@@ -46,15 +46,23 @@ class TestPortConfiguration:
         try:
             # Start server in background
             process = subprocess.Popen(
-                [sys.executable, "-m", "wikipedia_mcp", "--transport", "sse", "--port", str(port)],
+                [
+                    sys.executable,
+                    "-m",
+                    "wikipedia_mcp",
+                    "--transport",
+                    "sse",
+                    "--port",
+                    str(port),
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
-            
+
             # Wait for server to start
             time.sleep(3)
-            
+
             # Check if port is in use
             try:
                 response = requests.get(f"http://localhost:{port}/", timeout=5)
@@ -63,10 +71,10 @@ class TestPortConfiguration:
             except requests.exceptions.RequestException:
                 # Connection error is also acceptable as the server might not have HTTP endpoints
                 pass
-            
+
             # Verify process is still running
             assert process.poll() is None, "Server process should still be running"
-            
+
         finally:
             if process:
                 process.terminate()
@@ -76,10 +84,19 @@ class TestPortConfiguration:
         """Test that STDIO transport ignores port parameter."""
         # This should not raise an error
         result = subprocess.run(
-            [sys.executable, "-m", "wikipedia_mcp", "--transport", "stdio", "--port", "9999", "--help"],
+            [
+                sys.executable,
+                "-m",
+                "wikipedia_mcp",
+                "--transport",
+                "stdio",
+                "--port",
+                "9999",
+                "--help",
+            ],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
 
@@ -93,7 +110,7 @@ class TestHostConfiguration:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         assert "--host" in result.stdout
@@ -105,7 +122,7 @@ class TestHostConfiguration:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         assert "default: 127.0.0.1" in result.stdout
@@ -114,10 +131,19 @@ class TestHostConfiguration:
         """Test that STDIO transport ignores host parameter."""
         # This should not raise an error
         result = subprocess.run(
-            [sys.executable, "-m", "wikipedia_mcp", "--transport", "stdio", "--host", "0.0.0.0", "--help"],
+            [
+                sys.executable,
+                "-m",
+                "wikipedia_mcp",
+                "--transport",
+                "stdio",
+                "--host",
+                "0.0.0.0",
+                "--help",
+            ],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
 
@@ -131,7 +157,7 @@ class TestCachingFunctionality:
             [sys.executable, "-m", "wikipedia_mcp", "--help"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         assert result.returncode == 0
         assert "--enable-cache" in result.stdout
@@ -142,35 +168,35 @@ class TestCachingFunctionality:
         """Test WikipediaClient without caching."""
         client = WikipediaClient(enable_cache=False)
         assert client.enable_cache is False
-        
+
         # Methods should not be wrapped with lru_cache
-        assert not hasattr(client.search, 'cache_info')
+        assert not hasattr(client.search, "cache_info")
 
     def test_wikipedia_client_with_cache(self):
         """Test WikipediaClient with caching enabled."""
         client = WikipediaClient(enable_cache=True)
         assert client.enable_cache is True
-        
-        # Methods should be wrapped with lru_cache
-        assert hasattr(client.search, 'cache_info')
-        assert hasattr(client.get_article, 'cache_info')
-        assert hasattr(client.get_summary, 'cache_info')
 
-    @patch('wikipedia_mcp.wikipedia_client.requests.get')
+        # Methods should be wrapped with lru_cache
+        assert hasattr(client.search, "cache_info")
+        assert hasattr(client.get_article, "cache_info")
+        assert hasattr(client.get_summary, "cache_info")
+
+    @patch("wikipedia_mcp.wikipedia_client.requests.get")
     def test_cache_effectiveness(self, mock_get):
         """Test that caching actually works."""
         # Mock the API response
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
-            'query': {
-                'search': [
+            "query": {
+                "search": [
                     {
-                        'title': 'Test Article',
-                        'snippet': 'Test snippet',
-                        'pageid': 123,
-                        'wordcount': 100,
-                        'timestamp': '2023-01-01T00:00:00Z'
+                        "title": "Test Article",
+                        "snippet": "Test snippet",
+                        "pageid": 123,
+                        "wordcount": 100,
+                        "timestamp": "2023-01-01T00:00:00Z",
                     }
                 ]
             }
@@ -179,17 +205,17 @@ class TestCachingFunctionality:
 
         # Create client with caching
         client = WikipediaClient(enable_cache=True)
-        
+
         # Call the same search twice
         result1 = client.search("test query")
         result2 = client.search("test query")
-        
+
         # Should be the same result
         assert result1 == result2
-        
+
         # API should only be called once due to caching
         assert mock_get.call_count == 1
-        
+
         # Cache info should show hits
         cache_info = client.search.cache_info()
         assert cache_info.hits == 1
@@ -198,27 +224,29 @@ class TestCachingFunctionality:
     def test_cache_methods_coverage(self):
         """Test that all expected methods are cached when caching is enabled."""
         client = WikipediaClient(enable_cache=True)
-        
+
         cached_methods = [
-            'search',
-            'get_article', 
-            'get_summary',
-            'get_sections',
-            'get_links',
-            'get_related_topics',
-            'summarize_for_query',
-            'summarize_section',
-            'extract_facts'
+            "search",
+            "get_article",
+            "get_summary",
+            "get_sections",
+            "get_links",
+            "get_related_topics",
+            "summarize_for_query",
+            "summarize_section",
+            "extract_facts",
         ]
-        
+
         for method_name in cached_methods:
             method = getattr(client, method_name)
-            assert hasattr(method, 'cache_info'), f"Method {method_name} should be cached"
+            assert hasattr(
+                method, "cache_info"
+            ), f"Method {method_name} should be cached"
 
     def test_cache_size_limit(self):
         """Test that cache has proper size limit."""
         client = WikipediaClient(enable_cache=True)
-        
+
         # Check cache maxsize is set correctly
         cache_info = client.search.cache_info()
         assert cache_info.maxsize == 128
@@ -237,17 +265,23 @@ class TestIntegrationNewFeatures:
         """Test CLI with all new options."""
         result = subprocess.run(
             [
-                sys.executable, "-m", "wikipedia_mcp", 
-                "--transport", "stdio",
-                "--port", "8083", 
+                sys.executable,
+                "-m",
+                "wikipedia_mcp",
+                "--transport",
+                "stdio",
+                "--port",
+                "8083",
                 "--enable-cache",
-                "--language", "en",
-                "--log-level", "INFO",
-                "--help"
+                "--language",
+                "en",
+                "--log-level",
+                "INFO",
+                "--help",
             ],
             capture_output=True,
             text=True,
-            timeout=15
+            timeout=15,
         )
         assert result.returncode == 0
         assert "Wikipedia MCP Server" in result.stdout
@@ -257,7 +291,7 @@ class TestIntegrationNewFeatures:
         # Test cache without custom port
         server1 = create_server(enable_cache=True)
         assert server1 is not None
-        
+
         # Test custom port without cache (implicitly)
         server2 = create_server(language="en")  # enable_cache defaults to False
-        assert server2 is not None 
+        assert server2 is not None
