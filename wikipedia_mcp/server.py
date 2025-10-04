@@ -245,4 +245,36 @@ def create_server(language: str = "en", country: Optional[str] = None, enable_ca
         coordinates = wikipedia_client.get_coordinates(title)
         return coordinates
 
-    return server 
+    # Patch tool schemas to add explicit titles for Google ADK compatibility
+    # We wrap get_tool to modify schemas when they are accessed
+    _original_get_tool = server.get_tool
+
+    # Schema patches for Google ADK compatibility
+    _schema_patches = {
+        'summarize_article_for_query': {
+            'max_length': {'title': 'Max Length'}
+        },
+        'summarize_article_section': {
+            'max_length': {'title': 'Max Length'}
+        },
+        'extract_key_facts': {
+            'topic_within_article': {'title': 'Topic Within Article'}
+        }
+    }
+
+    async def _patched_get_tool(key: str):
+        """Wrapped get_tool that adds schema titles for Google ADK compatibility."""
+        tool = await _original_get_tool(key)
+
+        # Apply patches if this tool needs them
+        if key in _schema_patches:
+            for param_name, patch in _schema_patches[key].items():
+                if param_name in tool.parameters['properties']:
+                    tool.parameters['properties'][param_name].update(patch)
+
+        return tool
+
+    # Replace the get_tool method
+    server.get_tool = _patched_get_tool
+
+    return server

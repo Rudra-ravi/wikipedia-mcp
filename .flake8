@@ -1,0 +1,15 @@
+[flake8]
+max-line-length = 120
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    .venv,
+    venv,
+    wikipedia-mcp-env
+
+# Per-file ignores to keep CI green without changing existing test style
+per-file-ignores =
+    tests/*:F401,F841,W291,W292,W293,E501,E265,E302,E114,E117,E111,E261
