@@ -203,6 +203,9 @@ class TestLanguageVariantAPIIntegration:
         assert params["action"] == "query"
         assert params["srsearch"] == "China"
 
+        # Ensure returned results are forwarded to the caller unchanged
+        assert results == mock_response.json.return_value["query"]["search"]
+
 
 class TestServerIntegrationWithVariants:
     """Test server creation and integration with language variants."""

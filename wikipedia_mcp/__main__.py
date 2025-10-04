@@ -38,7 +38,10 @@ def main():
         type=str,
         default="stdio",
         choices=["stdio", "sse"],
-        help="Transport protocol for MCP communication (stdio for Claude Desktop, sse for HTTP streaming)",
+        help=(
+            "Transport protocol for MCP communication "
+            "(stdio for Claude Desktop, sse for HTTP streaming)"
+        ),
     )
     parser.add_argument(
         "--language",
@@ -52,7 +55,11 @@ def main():
         "--country",
         "-c",
         type=str,
-        help="Country/locale code for Wikipedia (e.g., US, CN, TW, Japan). Overrides --language if provided. See --list-countries for supported countries.",
+        help=(
+            "Country/locale code for Wikipedia (e.g., US, CN, TW, Japan). "
+            "Overrides --language if provided. See --list-countries for "
+            "supported countries."
+        ),
     )
     parser.add_argument(
         "--list-countries",
@@ -79,7 +86,10 @@ def main():
     parser.add_argument(
         "--access-token",
         type=str,
-        help="Access token for Wikipedia API (optional, can also be set via WIKIPEDIA_ACCESS_TOKEN environment variable)",
+        help=(
+            "Access token for Wikipedia API (optional, can also be set via "
+            "WIKIPEDIA_ACCESS_TOKEN environment variable)"
+        ),
     )
     args = parser.parse_args()
 

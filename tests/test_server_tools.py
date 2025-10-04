@@ -271,7 +271,10 @@ class TestWikipediaClient:
         mock_page = Mock()
         mock_page.exists.return_value = True
         mock_page.title = "Test Page"
-        mock_page.text = "This is a long text about a specific keyword. We want to find this keyword and summarize around it."
+        mock_page.text = (
+            "This is a long text about a specific keyword. "
+            "We want to find this keyword and summarize around it."
+        )
         mock_page.summary = "This is a general summary."
 
         with patch.object(self.client.wiki, "page", return_value=mock_page):
