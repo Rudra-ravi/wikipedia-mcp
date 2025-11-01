@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.56.1"
   }
 }
