@@ -252,6 +252,88 @@ To find the full path, run: `which wikipedia-mcp`
 
 > **Note**: If you encounter connection errors, see the [Troubleshooting](#common-issues) section for solutions.
 
+### Configuration for Claude Code
+
+[Claude Code](https://docs.claude.com/en/docs/claude-code) is Anthropic's official CLI for Claude. To use the Wikipedia MCP server with Claude Code:
+
+**Option 1: Using command name**
+```json
+{
+  "mcpServers": {
+    "wikipedia": {
+      "command": "wikipedia-mcp"
+    }
+  }
+}
+```
+
+**Option 2: Using full path**
+```json
+{
+  "mcpServers": {
+    "wikipedia": {
+      "command": "/full/path/to/wikipedia-mcp"
+    }
+  }
+}
+```
+
+**Option 3: With language/country options**
+```json
+{
+  "mcpServers": {
+    "wikipedia": {
+      "command": "wikipedia-mcp",
+      "args": ["--country", "US", "--enable-cache"]
+    }
+  }
+}
+```
+
+**Configuration file location:**
+- All platforms: `~/.config/claude-code/config.json`
+
+To find the full path, run: `which wikipedia-mcp`
+
+### Configuration for Codex
+
+[Codex](https://github.com/continuedev/continue) and other MCP-compatible tools can also use this server:
+
+**For Continue (VS Code/JetBrains extension):**
+
+Add to your Continue configuration file (`~/.continue/config.json`):
+
+```json
+{
+  "mcpServers": {
+    "wikipedia": {
+      "command": "wikipedia-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+**With custom options:**
+```json
+{
+  "mcpServers": {
+    "wikipedia-en": {
+      "command": "wikipedia-mcp",
+      "args": ["--country", "US"]
+    },
+    "wikipedia-zh": {
+      "command": "wikipedia-mcp",
+      "args": ["--language", "zh-hans", "--enable-cache"]
+    }
+  }
+}
+```
+
+**For other MCP clients:**
+
+This server uses the standard MCP protocol with stdio transport, making it compatible with any MCP client. Refer to your specific client's documentation for configuration details.
+
 ## Documentation Index
 
 - CLI usage and options: see [`docs/CLI.md`](docs/CLI.md)
