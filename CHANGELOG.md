@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2025-12-17
+
+### Added
+- Enhanced documentation with comprehensive docstrings for all methods and functions
+- Improved error handling and response consistency across all tools
+- Better environment variable parsing with support for `WIKIPEDIA_LANGUAGE_REGION` and `WIKIPEDIA_LOCALE`
+- Code restructuring with organized section headers for better maintainability
+- HTTP resource method renaming for clarity (`sections` → `sections_resource`, `links` → `links_resource`, `coordinates` → `coordinates_resource`)
+
+### Changed
+- Improved CLI environment variable handling with automatic fallback logic
+- Enhanced logging and configuration messages
+- Better parameter validation and error messages
+
+### Fixed
+- Consistent return types across all Wikipedia API methods
+- Improved error handling for edge cases in article retrieval and search
+
+## [1.7.0] - 2025-10-15
 
 ## [1.6.0] - 2025-09-12
 

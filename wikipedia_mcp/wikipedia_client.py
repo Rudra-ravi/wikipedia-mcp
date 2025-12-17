@@ -1,5 +1,10 @@
 """
 Wikipedia API client implementation.
+
+This class encapsulates logic for interacting with the Wikipedia API,
+including language and country resolution, search, article retrieval,
+summaries, related topics, key facts, and coordinate lookup. It also
+supports optional caching and authentication via personal access tokens.
 """
 
 import logging
@@ -8,7 +13,6 @@ import requests
 from typing import Dict, List, Optional, Any
 import functools
 from wikipedia_mcp import __version__
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +30,6 @@ class WikipediaClient:
         "zh-cn": "zh",  # Simplified Chinese (China)
         "zh-sg": "zh",  # Simplified Chinese (Singapore)
         "zh-my": "zh",  # Simplified Chinese (Malaysia)
-        # Add more language variants as needed
         # Serbian variants
         "sr-latn": "sr",  # Serbian Latin
         "sr-cyrl": "sr",  # Serbian Cyrillic
@@ -37,7 +40,7 @@ class WikipediaClient:
         "ku-arab": "ku",  # Kurdish Arabic
     }
 
-    # Country/locale to language code mappings
+    # Country/locale to language code mappings (partial list)
     COUNTRY_TO_LANGUAGE = {
         # English-speaking countries
         "US": "en",
@@ -240,7 +243,7 @@ class WikipediaClient:
         "Dominican Republic": "es",
         "BR": "pt",
         "Brazil": "pt",
-        # Additional countries
+        # Additional countries (partial)
         "BY": "be",
         "Belarus": "be",
         "EE": "et",
@@ -264,16 +267,17 @@ class WikipediaClient:
         enable_cache: bool = False,
         access_token: Optional[str] = None,
     ):
-        """Initialize the Wikipedia client.
+        """
+        Initialize the Wikipedia client.
 
         Args:
             language: The language code for Wikipedia (default: "en" for English).
-                     Supports language variants like 'zh-hans', 'zh-tw', etc.
+                      Supports language variants like 'zh-hans', 'zh-tw', etc.
             country: The country/locale code (e.g., 'US', 'CN', 'TW').
-                    If provided, overrides language parameter.
+                     If provided, overrides language parameter.
             enable_cache: Whether to enable caching for API calls (default: False).
             access_token: Personal Access Token for Wikipedia API authentication (optional).
-                         Used to increase rate limits and avoid 403 errors.
+                          Used to increase rate limits and avoid 403 errors.
         """
         # Resolve country to language if country is provided
         if country:
@@ -306,6 +310,7 @@ class WikipediaClient:
         self.api_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
 
         if self.enable_cache:
+            # Wrap methods with lru_cache to enable caching when requested
             self.search = functools.lru_cache(maxsize=128)(self.search)
             self.get_article = functools.lru_cache(maxsize=128)(self.get_article)
             self.get_summary = functools.lru_cache(maxsize=128)(self.get_summary)
@@ -317,8 +322,12 @@ class WikipediaClient:
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
             self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)
 
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
     def _resolve_country_to_language(self, country: str) -> str:
-        """Resolve country/locale code to language code.
+        """
+        Resolve country/locale code to language code.
 
         Args:
             country: The country/locale code (e.g., 'US', 'CN', 'Taiwan').
@@ -357,7 +366,8 @@ class WikipediaClient:
         )
 
     def _parse_language_variant(self, language: str) -> tuple[str, Optional[str]]:
-        """Parse language code and extract base language and variant.
+        """
+        Parse language code and extract base language and variant.
 
         Args:
             language: The language code, possibly with variant (e.g., 'zh-hans', 'zh-tw').
@@ -372,20 +382,20 @@ class WikipediaClient:
             return language, None
 
     def _get_request_headers(self) -> Dict[str, str]:
-        """Get request headers for API calls, including authentication if available.
+        """
+        Get request headers for API calls, including authentication if available.
 
         Returns:
             Dictionary of headers to use for requests.
         """
         headers = {"User-Agent": self.user_agent}
-
         if self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
-
         return headers
 
     def _add_variant_to_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Add language variant parameter to API request parameters if needed.
+        """
+        Add language variant parameter to API request parameters if needed.
 
         Args:
             params: The API request parameters.
@@ -398,8 +408,17 @@ class WikipediaClient:
             params["variant"] = self.language_variant
         return params
 
+    # ------------------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------------------
     def test_connectivity(self) -> Dict[str, Any]:
-        """Test connectivity to the Wikipedia API and return diagnostics."""
+        """
+        Test connectivity to the Wikipedia API and return diagnostics.
+
+        Returns:
+            A dictionary with status, URL, language, site information, and response time.
+            On failure, returns status 'failed' with error details.
+        """
         test_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
         test_params = {
             "action": "query",
@@ -427,6 +446,7 @@ class WikipediaClient:
                 "language": self.base_language,
                 "site_name": site_info.get("sitename", "Unknown"),
                 "server": site_info.get("server", "Unknown"),
+                # Round response time to milliseconds with high precision
                 "response_time_ms": response.elapsed.total_seconds() * 1000,
             }
 
@@ -440,8 +460,20 @@ class WikipediaClient:
                 "error_type": type(exc).__name__,
             }
 
+    # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
     def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Search Wikipedia for articles matching a query with validation and diagnostics."""
+        """
+        Search Wikipedia for articles matching a query with validation and diagnostics.
+
+        Args:
+            query: The search query.
+            limit: The maximum number of results to return.
+
+        Returns:
+            A list of dictionaries representing search results.
+        """
         if not query or not query.strip():
             logger.warning("Empty search query provided")
             return []
@@ -542,8 +574,12 @@ class WikipediaClient:
             logger.error("Unexpected error searching Wikipedia for '%s': %s", trimmed_query, exc)
             return []
 
+    # ------------------------------------------------------------------
+    # Article retrieval
+    # ------------------------------------------------------------------
     def get_article(self, title: str) -> Dict[str, Any]:
-        """Get the full content of a Wikipedia article.
+        """
+        Get the full content of a Wikipedia article.
 
         Args:
             title: The title of the Wikipedia article.
@@ -581,8 +617,12 @@ class WikipediaClient:
             logger.error(f"Error getting Wikipedia article: {e}")
             return {"title": title, "exists": False, "error": str(e)}
 
+    # ------------------------------------------------------------------
+    # Summaries
+    # ------------------------------------------------------------------
     def get_summary(self, title: str) -> str:
-        """Get a summary of a Wikipedia article.
+        """
+        Get a summary of a Wikipedia article.
 
         Args:
             title: The title of the Wikipedia article.
@@ -602,7 +642,8 @@ class WikipediaClient:
             return f"Error retrieving summary for '{title}': {str(e)}"
 
     def get_sections(self, title: str) -> List[Dict[str, Any]]:
-        """Get the sections of a Wikipedia article.
+        """
+        Get the sections of a Wikipedia article.
 
         Args:
             title: The title of the Wikipedia article.
@@ -622,7 +663,8 @@ class WikipediaClient:
             return []
 
     def get_links(self, title: str) -> List[str]:
-        """Get the links in a Wikipedia article.
+        """
+        Get the links in a Wikipedia article.
 
         Args:
             title: The title of the Wikipedia article.
@@ -641,8 +683,12 @@ class WikipediaClient:
             logger.error(f"Error getting Wikipedia links: {e}")
             return []
 
+    # ------------------------------------------------------------------
+    # Related topics
+    # ------------------------------------------------------------------
     def get_related_topics(self, title: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get topics related to a Wikipedia article based on links and categories.
+        """
+        Get topics related to a Wikipedia article based on links and categories.
 
         Args:
             title: The title of the Wikipedia article.
@@ -663,7 +709,6 @@ class WikipediaClient:
             # Get categories
             categories = list(page.categories.keys())
 
-            # Combine and limit
             related = []
 
             # Add links first
@@ -674,13 +719,14 @@ class WikipediaClient:
                         {
                             "title": link,
                             "summary": (
-                                link_page.summary[:200] + "..." if len(link_page.summary) > 200 else link_page.summary
+                                link_page.summary[:200] + "..."
+                                if len(link_page.summary) > 200
+                                else link_page.summary
                             ),
                             "url": link_page.fullurl,
                             "type": "link",
                         }
                     )
-
                 if len(related) >= limit:
                     break
 
@@ -697,8 +743,12 @@ class WikipediaClient:
             logger.error(f"Error getting related topics: {e}")
             return []
 
+    # ------------------------------------------------------------------
+    # Fact extraction
+    # ------------------------------------------------------------------
     def _extract_sections(self, sections, level=0) -> List[Dict[str, Any]]:
-        """Extract sections recursively.
+        """
+        Extract sections recursively.
 
         Args:
             sections: The sections to extract.
@@ -708,7 +758,6 @@ class WikipediaClient:
             A list of sections.
         """
         result = []
-
         for section in sections:
             section_data = {
                 "title": section.title,
@@ -717,12 +766,12 @@ class WikipediaClient:
                 "sections": self._extract_sections(section.sections, level + 1),
             }
             result.append(section_data)
-
         return result
 
     def summarize_for_query(self, title: str, query: str, max_length: int = 250) -> str:
         """
         Get a summary of a Wikipedia article tailored to a specific query.
+
         This is a simplified implementation that returns a snippet around the query.
 
         Args:
@@ -807,11 +856,17 @@ class WikipediaClient:
             logger.error(f"Error summarizing section '{section_title}' for article '{title}': {e}")
             return f"Error summarizing section '{section_title}': {str(e)}"
 
-    def extract_facts(self, title: str, topic_within_article: Optional[str] = None, count: int = 5) -> List[str]:
+    def extract_facts(
+        self,
+        title: str,
+        topic_within_article: Optional[str] = None,
+        count: int = 5,
+    ) -> List[str]:
         """
         Extract key facts from a Wikipedia article.
-        This is a simplified implementation returning the first few sentences of the summary
-        or a relevant section if topic_within_article is provided.
+
+        This is a simplified implementation returning the first few sentences
+        of the summary or a relevant section if topic_within_article is provided.
 
         Args:
             title: The title of the Wikipedia article.
@@ -850,10 +905,10 @@ class WikipediaClient:
             if not text_to_process:
                 return ["No content found to extract facts from."]
 
-            # Basic sentence splitting (can be improved with NLP libraries like nltk or spacy)
+            # Basic sentence splitting (can be improved with NLP libraries)
             sentences = [s.strip() for s in text_to_process.split(".") if s.strip()]
 
-            facts = []
+            facts: List[str] = []
             for sentence in sentences[:count]:
                 if sentence:  # Ensure not an empty string after strip
                     facts.append(sentence + ".")  # Add back the period
@@ -864,8 +919,12 @@ class WikipediaClient:
             logger.error(f"Error extracting key facts for '{title}': {e}")
             return [f"Error extracting key facts for '{title}': {str(e)}"]
 
+    # ------------------------------------------------------------------
+    # Coordinates
+    # ------------------------------------------------------------------
     def get_coordinates(self, title: str) -> Dict[str, Any]:
-        """Get the coordinates of a Wikipedia article.
+        """
+        Get the coordinates of a Wikipedia article.
 
         Args:
             title: The title of the Wikipedia article.
@@ -879,7 +938,6 @@ class WikipediaClient:
             "prop": "coordinates",
             "titles": title,
         }
-
         # Add variant parameter if needed
         params = self._add_variant_to_params(params)
 
