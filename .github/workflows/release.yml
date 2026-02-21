@@ -337,7 +337,7 @@ jobs:
       - name: Verify package before publishing
         run: |
           echo "🔍 Verifying packages before PyPI upload..."
-          twine check dist/*
+          python -m twine check dist/*
           echo "✅ Package verification passed"
 
       - name: Publish to PyPI
