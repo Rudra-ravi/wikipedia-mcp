@@ -331,7 +331,8 @@ jobs:
       - name: Prepare environment
         run: |
           python -m pip install --upgrade pip
-          pip install twine
+          python -m pip install --upgrade twine pkginfo
+          python -m twine --version
 
       - name: Verify package before publishing
         run: |
