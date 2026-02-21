@@ -233,7 +233,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [set-version, build-and-test]
+    needs: [set-version, prepare-release, build-and-test]
     if: needs.prepare-release.outputs.is-draft == 'false'
     permissions:
       contents: write
