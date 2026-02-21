@@ -6,6 +6,7 @@ import pytest
 import asyncio
 import json
 from wikipedia_mcp.server import create_server
+from tests.tool_helpers import get_tool, get_tools
 
 
 class TestGoogleADKCompatibility:
@@ -15,7 +16,7 @@ class TestGoogleADKCompatibility:
     async def test_all_tools_schemas_compatible(self):
         """Test that all tool schemas are compatible with Google ADK agents."""
         server = create_server()
-        tools = await server.get_tools()
+        tools = await get_tools(server)
 
         # Tools that previously had anyOf issues
         problematic_tools = [
@@ -28,7 +29,7 @@ class TestGoogleADKCompatibility:
             assert expected_tool in tools, f"Expected tool '{expected_tool}' to be registered"
 
         for tool_name in tools:
-            tool_obj = await server.get_tool(tool_name)
+            tool_obj = await get_tool(server, tool_name)
             schema = tool_obj.parameters
 
             # Check each parameter for anyOf usage
@@ -51,10 +52,10 @@ class TestGoogleADKCompatibility:
     async def test_all_tools_have_readonly_annotations(self):
         """All tools should include MCP behavior annotations for clients."""
         server = create_server()
-        tools = await server.get_tools()
+        tools = await get_tools(server)
 
         for tool_name in tools:
-            tool_obj = await server.get_tool(tool_name)
+            tool_obj = await get_tool(server, tool_name)
             annotations = tool_obj.annotations
             assert annotations is not None, f"Tool '{tool_name}' must define annotations"
             assert annotations.readOnlyHint is True
@@ -66,7 +67,7 @@ class TestGoogleADKCompatibility:
     async def test_all_canonical_tools_have_wikipedia_aliases(self):
         """Each canonical tool should expose a wikipedia_* alias."""
         server = create_server()
-        tools = await server.get_tools()
+        tools = await get_tools(server)
 
         canonical_tools = [
             "search_wikipedia",
@@ -90,10 +91,10 @@ class TestGoogleADKCompatibility:
     async def test_all_tools_have_object_output_schema(self):
         """Output schemas should be explicit object schemas."""
         server = create_server()
-        tools = await server.get_tools()
+        tools = await get_tools(server)
 
         for tool_name in tools:
-            tool_obj = await server.get_tool(tool_name)
+            tool_obj = await get_tool(server, tool_name)
             assert isinstance(tool_obj.output_schema, dict)
             assert tool_obj.output_schema.get("type") == "object"
 
@@ -101,7 +102,7 @@ class TestGoogleADKCompatibility:
     async def test_summarize_article_for_query_schema(self):
         """Test specific schema for summarize_article_for_query tool."""
         server = create_server()
-        tool_obj = await server.get_tool("summarize_article_for_query")
+        tool_obj = await get_tool(server, "summarize_article_for_query")
         schema = tool_obj.parameters
 
         # Check max_length parameter specifically
@@ -119,7 +120,7 @@ class TestGoogleADKCompatibility:
     async def test_summarize_article_section_schema(self):
         """Test specific schema for summarize_article_section tool."""
         server = create_server()
-        tool_obj = await server.get_tool("summarize_article_section")
+        tool_obj = await get_tool(server, "summarize_article_section")
         schema = tool_obj.parameters
 
         # Check max_length parameter specifically
@@ -137,7 +138,7 @@ class TestGoogleADKCompatibility:
     async def test_extract_key_facts_schema(self):
         """Test specific schema for extract_key_facts tool."""
         server = create_server()
-        tool_obj = await server.get_tool("extract_key_facts")
+        tool_obj = await get_tool(server, "extract_key_facts")
         schema = tool_obj.parameters
 
         # Check topic_within_article parameter specifically
@@ -174,10 +175,10 @@ class TestGoogleADKCompatibility:
     async def test_tool_compatibility_json_serialization(self):
         """Test that all tool schemas can be properly JSON serialized for Google ADK."""
         server = create_server()
-        tools = await server.get_tools()
+        tools = await get_tools(server)
 
         for tool_name in tools:
-            tool_obj = await server.get_tool(tool_name)
+            tool_obj = await get_tool(server, tool_name)
             schema = tool_obj.parameters
 
             # Should be able to serialize to JSON without issues

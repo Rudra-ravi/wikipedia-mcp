@@ -850,9 +850,7 @@ class WikipediaClient:
                         {
                             "title": link,
                             "summary": (
-                                link_page.summary[:200] + "..."
-                                if len(link_page.summary) > 200
-                                else link_page.summary
+                                link_page.summary[:200] + "..." if len(link_page.summary) > 200 else link_page.summary
                             ),
                             "url": link_page.fullurl,
                             "type": "link",

@@ -4,7 +4,6 @@ import logging
 from typing import Annotated, Any, Literal, Optional, cast
 
 from fastmcp import FastMCP
-from fastmcp.server.auth.providers.bearer import BearerAuthProvider
 from mcp.types import ToolAnnotations
 from pydantic import Field
 from starlette.datastructures import Headers
@@ -68,7 +67,21 @@ class StaticBearerAuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def _build_jwt_auth_provider(auth_config: AuthConfig) -> Optional[BearerAuthProvider]:
+def _create_jwt_auth_provider(**kwargs: Any) -> Any:
+    """Create a JWT auth provider compatible with FastMCP 2.x and 3.x."""
+    import importlib
+
+    try:
+        bearer_module = importlib.import_module("fastmcp.server.auth.providers.bearer")
+        bearer_auth_provider_cls = getattr(bearer_module, "BearerAuthProvider")
+        return bearer_auth_provider_cls(**kwargs)
+    except ModuleNotFoundError:
+        auth_module = importlib.import_module("fastmcp.server.auth")
+        jwt_verifier_cls = getattr(auth_module, "JWTVerifier")
+        return jwt_verifier_cls(**kwargs)
+
+
+def _build_jwt_auth_provider(auth_config: AuthConfig) -> Optional[Any]:
     if auth_config.mode != "jwt":
         return None
 
@@ -79,7 +92,7 @@ def _build_jwt_auth_provider(auth_config: AuthConfig) -> Optional[BearerAuthProv
         else:
             audience = auth_config.audience
 
-    return BearerAuthProvider(
+    return _create_jwt_auth_provider(
         public_key=auth_config.public_key,
         jwks_uri=auth_config.jwks_uri,
         issuer=auth_config.issuer,

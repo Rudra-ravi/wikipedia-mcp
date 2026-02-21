@@ -8,6 +8,7 @@ import requests
 from unittest.mock import Mock, patch, MagicMock
 from wikipedia_mcp.server import create_server
 from wikipedia_mcp.wikipedia_client import WikipediaClient
+from tests.tool_helpers import get_tools
 
 
 class TestWikipediaClient:
@@ -484,7 +485,7 @@ class TestMCPServerTools:
         assert server is not None
 
         async def gather_tools():
-            tools = await server.get_tools()
+            tools = await get_tools(server)
             return list(tools.keys())
 
         tool_names = asyncio.run(gather_tools())

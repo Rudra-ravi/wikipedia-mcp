@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 from wikipedia_mcp.wikipedia_client import WikipediaClient
 from wikipedia_mcp.server import create_server
+from tests.tool_helpers import get_tool, get_tools
 
 
 class TestWikipediaClientCoordinates:
@@ -237,7 +238,7 @@ class TestServerCoordinatesTool:
     async def test_get_coordinates_tool_registration(self):
         """Test that get_coordinates tool is properly registered."""
         # Check if the tool is available
-        tools = await self.server.get_tools()
+        tools = await get_tools(self.server)
         assert "get_coordinates" in tools
 
     @pytest.mark.asyncio
@@ -254,7 +255,7 @@ class TestServerCoordinatesTool:
             }
 
             # Get and execute the tool
-            tool = await self.server.get_tool("get_coordinates")
+            tool = await get_tool(self.server, "get_coordinates")
             assert tool is not None
 
             # Verify tool name and description
@@ -264,7 +265,7 @@ class TestServerCoordinatesTool:
     @pytest.mark.asyncio
     async def test_get_coordinates_tool_schema(self):
         """Test that get_coordinates tool has correct schema."""
-        tool = await self.server.get_tool("get_coordinates")
+        tool = await get_tool(self.server, "get_coordinates")
         schema = tool.parameters
 
         # Check that title parameter is required and is a string
@@ -281,7 +282,7 @@ class TestCoordinatesIntegration:
         server = create_server(language="en", country="US")
 
         # Verify tool is available
-        tools = await server.get_tools()
+        tools = await get_tools(server)
         assert "get_coordinates" in tools
 
     @pytest.mark.asyncio
@@ -290,7 +291,7 @@ class TestCoordinatesIntegration:
         server = create_server(language="en", enable_cache=True)
 
         # Verify tool is available
-        tools = await server.get_tools()
+        tools = await get_tools(server)
         assert "get_coordinates" in tools
 
 

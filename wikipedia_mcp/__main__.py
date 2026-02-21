@@ -123,10 +123,7 @@ def main() -> None:
     parser.add_argument(
         "--access-token",
         type=str,
-        help=(
-            "Access token for Wikipedia API (optional). "
-            "Can also be set via WIKIPEDIA_ACCESS_TOKEN."
-        ),
+        help=("Access token for Wikipedia API (optional). " "Can also be set via WIKIPEDIA_ACCESS_TOKEN."),
     )
 
     # MCP server auth options (separate from Wikipedia API token)
