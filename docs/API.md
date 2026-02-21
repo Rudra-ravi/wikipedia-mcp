@@ -2,6 +2,13 @@
 
 This document describes the API endpoints and tools available in the Wikipedia MCP server.
 
+## Transport Notes
+
+- `stdio` is the default local transport.
+- `http` / `streamable-http` are the preferred network transports (default path: `/mcp`).
+- `sse` is retained for compatibility and considered legacy.
+- Tool/resource interfaces below are transport-agnostic.
+
 ## HTTP Endpoints
 
 ### Search Articles
@@ -117,6 +124,8 @@ Get the links in a Wikipedia article.
 ```
 
 ## MCP Tools
+
+Every canonical tool also has an alias prefixed with `wikipedia_` (for example, `wikipedia_search_wikipedia`, `wikipedia_get_article`, etc.) with the same schema and behavior.
 
 ### search_wikipedia
 Search Wikipedia for articles matching a query.

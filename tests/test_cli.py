@@ -79,6 +79,26 @@ def test_cli_sse_transport_starts():
     ), "Expected uvicorn startup messages for sse transport"
 
 
+def test_cli_http_transport_starts():
+    """Test that http transport starts and serves until timeout."""
+    args = ["--transport", "http", "--log-level", "INFO"]
+    result = run_mcp_command(args, expect_timeout=True)
+
+    assert isinstance(result, subprocess.TimeoutExpired), "Expected timeout for http mode"
+    stderr_output = _textify(getattr(result, "stderr", ""))
+    assert "Starting HTTP MCP server" in stderr_output
+
+
+def test_cli_streamable_http_transport_starts():
+    """Test that streamable-http transport starts and serves until timeout."""
+    args = ["--transport", "streamable-http", "--log-level", "INFO"]
+    result = run_mcp_command(args, expect_timeout=True)
+
+    assert isinstance(result, subprocess.TimeoutExpired), "Expected timeout for streamable-http mode"
+    stderr_output = _textify(getattr(result, "stderr", ""))
+    assert "Starting HTTP MCP server" in stderr_output
+
+
 def test_cli_invalid_transport():
     """Test CLI behavior with an invalid transport option."""
     args = ["--transport", "invalid_transport_option"]
@@ -95,6 +115,23 @@ def test_cli_help_message():
     assert "usage:" in result.stdout.lower(), "Should show usage information"
     assert "--transport" in result.stdout, "Should show transport option"
     assert "--log-level" in result.stdout, "Should show log-level option"
+    assert "--path PATH" in result.stdout, "Should show path option"
+    assert "--auth-mode {none,static,jwt}" in result.stdout, "Should show auth mode option"
+
+
+def test_cli_static_auth_requires_token():
+    """Static auth mode should fail fast without a token."""
+    args = ["--transport", "http", "--auth-mode", "static"]
+    result = run_mcp_command(args, expect_timeout=False)
+    assert result.returncode != 0
+    assert "--auth-mode static requires --auth-token" in result.stderr
+
+
+def test_cli_static_auth_with_token_starts():
+    """Static auth mode with a token should start the server."""
+    args = ["--transport", "http", "--auth-mode", "static", "--auth-token", "secret"]
+    result = run_mcp_command(args, expect_timeout=True)
+    assert isinstance(result, subprocess.TimeoutExpired), "Expected timeout for long-running http mode"
 
 
 def test_cli_log_levels():

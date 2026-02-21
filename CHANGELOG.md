@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-02-21
+
+### Added
+- Modern network transport support via `--transport http|streamable-http` and configurable endpoint `--path` (default `/mcp`).
+- Optional MCP transport authentication modes: `--auth-mode none|static|jwt` with `--auth-*` options.
+- Explicit output schemas for MCP tools backed by Pydantic models (`wikipedia_mcp/schemas.py`).
+- `wikipedia_*` aliases for all canonical tools to improve cross-server discoverability.
+- Tool metadata annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint`, `destructiveHint`).
+
+### Changed
+- Major version bump to `2.0.0` to mark transport/auth/schema modernization as the new stable baseline.
+- `sse` transport is now documented as legacy compatibility transport; `http/streamable-http` are recommended for new deployments.
+- Clarified security model: `--access-token` is outbound Wikipedia API auth; `--auth-*` secures inbound MCP network requests.
+- Updated architecture, CLI, API, README, and development docs to match current transport/auth behavior.
+
+### Fixed
+- Reduced stdio startup protocol risk by running stdio transport with `show_banner=False` (issue #39).
+- Added bounded retry/backoff and malformed JSON handling for Wikipedia HTTP calls (issue #38).
+- Added first-class streamable HTTP support in CLI/runtime flow (issue #41).
+
 ## [1.7.0] - 2025-12-17
 
 ### Added

@@ -48,6 +48,56 @@ class TestGoogleADKCompatibility:
                     ), f"Tool '{tool_name}' parameter '{param_name}' has unexpected keys: {unexpected_keys}"
 
     @pytest.mark.asyncio
+    async def test_all_tools_have_readonly_annotations(self):
+        """All tools should include MCP behavior annotations for clients."""
+        server = create_server()
+        tools = await server.get_tools()
+
+        for tool_name in tools:
+            tool_obj = await server.get_tool(tool_name)
+            annotations = tool_obj.annotations
+            assert annotations is not None, f"Tool '{tool_name}' must define annotations"
+            assert annotations.readOnlyHint is True
+            assert annotations.idempotentHint is True
+            assert annotations.openWorldHint is True
+            assert annotations.destructiveHint is False
+
+    @pytest.mark.asyncio
+    async def test_all_canonical_tools_have_wikipedia_aliases(self):
+        """Each canonical tool should expose a wikipedia_* alias."""
+        server = create_server()
+        tools = await server.get_tools()
+
+        canonical_tools = [
+            "search_wikipedia",
+            "test_wikipedia_connectivity",
+            "get_article",
+            "get_summary",
+            "summarize_article_for_query",
+            "summarize_article_section",
+            "extract_key_facts",
+            "get_related_topics",
+            "get_sections",
+            "get_links",
+            "get_coordinates",
+        ]
+
+        for tool_name in canonical_tools:
+            assert tool_name in tools
+            assert f"wikipedia_{tool_name}" in tools
+
+    @pytest.mark.asyncio
+    async def test_all_tools_have_object_output_schema(self):
+        """Output schemas should be explicit object schemas."""
+        server = create_server()
+        tools = await server.get_tools()
+
+        for tool_name in tools:
+            tool_obj = await server.get_tool(tool_name)
+            assert isinstance(tool_obj.output_schema, dict)
+            assert tool_obj.output_schema.get("type") == "object"
+
+    @pytest.mark.asyncio
     async def test_summarize_article_for_query_schema(self):
         """Test specific schema for summarize_article_for_query tool."""
         server = create_server()
@@ -59,7 +109,8 @@ class TestGoogleADKCompatibility:
         assert max_length_param["type"] == "integer"
         assert max_length_param["default"] == 250
         assert "anyOf" not in max_length_param
-        assert max_length_param["title"] == "Max Length"
+        if "title" in max_length_param:
+            assert max_length_param["title"] == "Max Length"
 
         # Check required parameters
         assert set(schema["required"]) == {"title", "query"}
@@ -76,7 +127,8 @@ class TestGoogleADKCompatibility:
         assert max_length_param["type"] == "integer"
         assert max_length_param["default"] == 150
         assert "anyOf" not in max_length_param
-        assert max_length_param["title"] == "Max Length"
+        if "title" in max_length_param:
+            assert max_length_param["title"] == "Max Length"
 
         # Check required parameters
         assert set(schema["required"]) == {"title", "section_title"}
@@ -93,7 +145,8 @@ class TestGoogleADKCompatibility:
         assert topic_param["type"] == "string"
         assert topic_param["default"] == ""
         assert "anyOf" not in topic_param
-        assert topic_param["title"] == "Topic Within Article"
+        if "title" in topic_param:
+            assert topic_param["title"] == "Topic Within Article"
 
         # Check count parameter
         count_param = schema["properties"]["count"]

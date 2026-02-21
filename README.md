@@ -30,6 +30,8 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Country/Locale Support**: Use intuitive country codes like `--country US`, `--country China`, or `--country TW` instead of language codes. Automatically maps to appropriate Wikipedia language variants.
 - **Language Variant Support**: Support for language variants such as Chinese traditional/simplified (e.g., `zh-hans` for Simplified Chinese, `zh-tw` for Traditional Chinese), Serbian scripts (`sr-latn`, `sr-cyrl`), and other regional variants.
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
+- **Modern MCP Transport Support**: Supports `stdio`, `http`, and `streamable-http` (with legacy `sse` compatibility).
+- **Optional MCP Transport Auth**: Secure network transports with `--auth-mode static` or `--auth-mode jwt`.
 - **Google ADK Compatibility**: Fully compatible with Google ADK agents and other AI frameworks that use strict function calling schemas
 
 ## Installation
@@ -109,7 +111,9 @@ wikipedia-mcp
 
 # Specify transport protocol (default: stdio)
 wikipedia-mcp --transport stdio  # For Claude Desktop
-wikipedia-mcp --transport sse    # For HTTP streaming
+wikipedia-mcp --transport http --host 0.0.0.0 --port 8080 --path /mcp
+wikipedia-mcp --transport streamable-http --host 0.0.0.0 --port 8080 --path /mcp
+wikipedia-mcp --transport sse    # Legacy compatibility transport
 
 # Specify language (default: en for English)
 wikipedia-mcp --language ja  # Example for Japanese
@@ -128,8 +132,8 @@ wikipedia-mcp --country france    # French (case insensitive)
 # List all supported countries
 wikipedia-mcp --list-countries
 
-# Optional: Specify host/port for SSE (use 0.0.0.0 for containers)
-wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
+# Optional: Specify host/port/path for network transport (use 0.0.0.0 for containers)
+wikipedia-mcp --transport http --host 0.0.0.0 --port 8080 --path /mcp
 
 # Optional: Enable caching
 wikipedia-mcp --enable-cache
@@ -141,22 +145,26 @@ wikipedia-mcp --access-token your_wikipedia_token_here
 export WIKIPEDIA_ACCESS_TOKEN=your_wikipedia_token_here
 wikipedia-mcp
 
-# Security note for SSE: The transport does not define built-in endpoint authentication.
-# To restrict access, run the server behind an authenticating reverse proxy (e.g., Nginx/Traefik),
-# or expose it only on a private network/VPN and use firewall rules.
+# Optional: Secure incoming MCP network requests with static bearer token
+wikipedia-mcp --transport http --auth-mode static --auth-token your_mcp_token --host 0.0.0.0 --port 8080
+
+# Optional: Secure incoming MCP network requests with JWT validation
+wikipedia-mcp --transport http --auth-mode jwt --auth-jwks-uri https://issuer/.well-known/jwks.json --auth-issuer https://issuer
+
+# Security note: prefer http/streamable-http + auth-mode for exposed network transport.
 
 # Combine options
-wikipedia-mcp --country Taiwan --enable-cache --access-token your_token --transport sse --port 8080
+wikipedia-mcp --country Taiwan --enable-cache --access-token your_wikipedia_token --transport http --path /mcp --port 8080
 
 ### Docker/Kubernetes
 
-When running inside containers, bind the SSE server to all interfaces and map
+When running inside containers, bind the HTTP MCP server to all interfaces and map
 the container port to the host or service:
 
 ```bash
 # Build and run with Docker
 docker build -t wikipedia-mcp .
-docker run --rm -p 8080:8080 wikipedia-mcp --transport sse --host 0.0.0.0 --port 8080
+docker run --rm -p 8080:8080 wikipedia-mcp --transport http --host 0.0.0.0 --port 8080 --path /mcp
 ```
 
 Kubernetes example (minimal):
@@ -179,7 +187,7 @@ spec:
       containers:
         - name: server
           image: your-repo/wikipedia-mcp:latest
-          args: ["--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+          args: ["--transport", "http", "--host", "0.0.0.0", "--port", "8080", "--path", "/mcp"]
           ports:
             - containerPort: 8080
 ---
@@ -264,6 +272,8 @@ To find the full path, run: `which wikipedia-mcp`
 ## Available MCP Tools
 
 The Wikipedia MCP server provides the following tools for LLMs to interact with Wikipedia:
+
+Each tool is also exposed with a `wikipedia_`-prefixed alias (for example, `wikipedia_get_article`) for improved cross-server discoverability.
 
 ### `search_wikipedia`
 
@@ -808,7 +818,7 @@ This emits the request parameters, response status codes, and any warnings retur
 
 The Model Context Protocol (MCP) is not a traditional HTTP API but a specialized protocol for communication between LLMs and external tools. Key characteristics:
 
-- Uses stdio (standard input/output) or SSE (Server-Sent Events) for communication
+- Uses stdio for local integrations and streamable HTTP for network integrations (`sse` retained for legacy compatibility)
 - Designed specifically for AI model interaction
 - Provides standardized formats for tools, resources, and prompts
 - Integrates directly with Claude and other MCP-compatible AI systems

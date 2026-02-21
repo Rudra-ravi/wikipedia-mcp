@@ -1,19 +1,101 @@
-"""
-Wikipedia MCP server implementation.
-
-This module defines the FastMCP server and registers tools and resources for
-interacting with Wikipedia via the WikipediaClient. It includes search,
-article retrieval, summaries, and diagnostics.
-"""
+"""Wikipedia MCP server implementation."""
 
 import logging
-from typing import Dict, Optional, Any, Annotated
-from pydantic import Field
+from typing import Annotated, Any, Literal, Optional, cast
 
 from fastmcp import FastMCP
+from fastmcp.server.auth.providers.bearer import BearerAuthProvider
+from mcp.types import ToolAnnotations
+from pydantic import Field
+from starlette.datastructures import Headers
+from starlette.middleware import Middleware as ASGIMiddleware
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from wikipedia_mcp.auth_config import AuthConfig
+from wikipedia_mcp.schemas import (
+    ArticleResponse,
+    ConnectivityResponse,
+    CoordinatesResponse,
+    KeyFactsResponse,
+    LinksResponse,
+    QuerySummaryResponse,
+    RelatedTopicsResponse,
+    SearchWikipediaResponse,
+    SectionSummaryResponse,
+    SectionsResponse,
+    SummaryResponse,
+    model_output_schema,
+)
 from wikipedia_mcp.wikipedia_client import WikipediaClient
 
 logger = logging.getLogger(__name__)
+
+_READ_ONLY_TOOL_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+)
+
+
+class StaticBearerAuthMiddleware:
+    """ASGI middleware that enforces a static Bearer token."""
+
+    def __init__(self, app: ASGIApp, token: str):
+        self.app = app
+        self._expected = f"Bearer {token}"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = Headers(scope=scope)
+        authorization = headers.get("authorization")
+        if authorization != self._expected:
+            response = JSONResponse(
+                {
+                    "error": "Unauthorized",
+                    "message": "Missing or invalid Bearer token",
+                },
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            await response(scope, receive, send)
+            return
+
+        await self.app(scope, receive, send)
+
+
+def _build_jwt_auth_provider(auth_config: AuthConfig) -> Optional[BearerAuthProvider]:
+    if auth_config.mode != "jwt":
+        return None
+
+    audience: str | list[str] | None = None
+    if auth_config.audience:
+        if "," in auth_config.audience:
+            audience = [a.strip() for a in auth_config.audience.split(",") if a.strip()]
+        else:
+            audience = auth_config.audience
+
+    return BearerAuthProvider(
+        public_key=auth_config.public_key,
+        jwks_uri=auth_config.jwks_uri,
+        issuer=auth_config.issuer,
+        algorithm=auth_config.algorithm,
+        audience=audience,
+        required_scopes=auth_config.required_scopes,
+    )
+
+
+def build_http_middleware(auth_config: AuthConfig) -> list[ASGIMiddleware]:
+    """Build additional HTTP middleware based on auth mode."""
+    if auth_config.mode == "static":
+        if not auth_config.token:
+            raise ValueError("Static auth mode requires a non-empty token")
+        return [ASGIMiddleware(StaticBearerAuthMiddleware, token=auth_config.token)]
+    return []
 
 
 def create_server(
@@ -21,14 +103,34 @@ def create_server(
     country: Optional[str] = None,
     enable_cache: bool = False,
     access_token: Optional[str] = None,
+    auth_config: Optional[AuthConfig] = None,
+    auth_mode: str = "none",
+    auth_public_key: Optional[str] = None,
+    auth_jwks_uri: Optional[str] = None,
+    auth_issuer: Optional[str] = None,
+    auth_audience: Optional[str] = None,
+    auth_algorithm: Optional[str] = None,
+    auth_required_scopes: Optional[list[str]] = None,
 ) -> FastMCP:
     """Create and configure the Wikipedia MCP server."""
 
-    server = FastMCP(
-        name="Wikipedia",
+    resolved_auth = auth_config or AuthConfig(
+        mode=cast(Literal["none", "static", "jwt"], auth_mode if auth_mode in {"none", "static", "jwt"} else "none"),
+        public_key=auth_public_key,
+        jwks_uri=auth_jwks_uri,
+        issuer=auth_issuer,
+        audience=auth_audience,
+        algorithm=auth_algorithm,
+        required_scopes=auth_required_scopes,
     )
 
-    # Initialize Wikipedia client
+    auth_provider = _build_jwt_auth_provider(resolved_auth)
+
+    server: FastMCP = FastMCP(
+        name="Wikipedia",
+        auth=auth_provider,
+    )
+
     wikipedia_client = WikipediaClient(
         language=language,
         country=country,
@@ -36,25 +138,28 @@ def create_server(
         access_token=access_token,
     )
 
-    # ------------------------------------------------------------------
-    # Tool: search_wikipedia
-    # ------------------------------------------------------------------
-    @server.tool()
-    def search_wikipedia(query: str, limit: int = 10) -> Dict[str, Any]:
-        """
-        Search Wikipedia for articles matching a query.
+    def register_tool(name: str, output_schema: dict[str, Any]):
+        def decorator(func):
+            server.tool(
+                func,
+                name=name,
+                annotations=_READ_ONLY_TOOL_ANNOTATIONS,
+                output_schema=output_schema,
+            )
+            server.tool(
+                func,
+                name=f"wikipedia_{name}",
+                annotations=_READ_ONLY_TOOL_ANNOTATIONS,
+                output_schema=output_schema,
+            )
+            return func
 
-        Parameters:
-            query: The search term to look up on Wikipedia.
-            limit: Maximum number of results to return (1-500).
+        return decorator
 
-        Returns a dictionary with the search query, results, status, and
-        additional metadata. If the query is empty or invalid, the status
-        will be 'error' and an explanatory message is included.
-        """
+    @register_tool("search_wikipedia", model_output_schema(SearchWikipediaResponse))
+    def search_wikipedia(query: str, limit: int = 10):
         logger.info("Tool: Searching Wikipedia for '%s' (limit=%d)", query, limit)
 
-        # Validate query
         if not query or not query.strip():
             logger.warning("Search tool called with empty query")
             return {
@@ -64,7 +169,6 @@ def create_server(
                 "message": "Empty search query provided",
             }
 
-        # Sanitize and validate limit
         validated_limit = limit
         if limit <= 0:
             validated_limit = 10
@@ -75,7 +179,7 @@ def create_server(
 
         results = wikipedia_client.search(query, limit=validated_limit)
         status = "success" if results else "no_results"
-        response: Dict[str, Any] = {
+        response = {
             "query": query,
             "results": results,
             "status": status,
@@ -91,22 +195,11 @@ def create_server(
 
         return response
 
-    # ------------------------------------------------------------------
-    # Tool: test_wikipedia_connectivity
-    # ------------------------------------------------------------------
-    @server.tool()
-    def test_wikipedia_connectivity() -> Dict[str, Any]:
-        """
-        Provide diagnostics for Wikipedia API connectivity.
-
-        Returns the base API URL, language, site information, and response
-        time in milliseconds. If connectivity fails, status will be 'failed'
-        with error details.
-        """
+    @register_tool("test_wikipedia_connectivity", model_output_schema(ConnectivityResponse))
+    def test_wikipedia_connectivity():
         logger.info("Tool: Testing Wikipedia connectivity")
         diagnostics = wikipedia_client.test_connectivity()
 
-        # Round response_time_ms for nicer output if present
         if (
             diagnostics.get("status") == "success"
             and "response_time_ms" in diagnostics
@@ -115,237 +208,137 @@ def create_server(
             diagnostics["response_time_ms"] = round(float(diagnostics["response_time_ms"]), 3)
         return diagnostics
 
-    # ------------------------------------------------------------------
-    # Tool: get_article
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_article(title: str) -> Dict[str, Any]:
-        """
-        Get the full content of a Wikipedia article.
-
-        Returns a dictionary containing article details or an error message
-        if retrieval fails.
-        """
-        logger.info(f"Tool: Getting article: {title}")
+    @register_tool("get_article", model_output_schema(ArticleResponse))
+    def get_article(title: str):
+        logger.info("Tool: Getting article: %s", title)
         article = wikipedia_client.get_article(title)
-        # Ensure we always return a dictionary
         return article or {"title": title, "exists": False, "error": "Unknown error retrieving article"}
 
-    # ------------------------------------------------------------------
-    # Tool: get_summary
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_summary(title: str) -> Dict[str, Any]:
-        """
-        Get a summary of a Wikipedia article.
-
-        Returns a dictionary with the title and summary string. On error,
-        includes an error message instead of a summary.
-        """
-        logger.info(f"Tool: Getting summary for: {title}")
+    @register_tool("get_summary", model_output_schema(SummaryResponse))
+    def get_summary(title: str):
+        logger.info("Tool: Getting summary for: %s", title)
         summary = wikipedia_client.get_summary(title)
         if summary and not summary.startswith("Error"):
             return {"title": title, "summary": summary}
-        else:
-            return {"title": title, "summary": None, "error": summary}
+        return {"title": title, "summary": None, "error": summary}
 
-    # ------------------------------------------------------------------
-    # Tool: summarize_article_for_query
-    # ------------------------------------------------------------------
-    @server.tool()
+    @register_tool("summarize_article_for_query", model_output_schema(QuerySummaryResponse))
     def summarize_article_for_query(
         title: str,
         query: str,
         max_length: Annotated[int, Field(title="Max Length")] = 250,
-    ) -> Dict[str, Any]:
-        """
-        Get a summary of a Wikipedia article tailored to a specific query.
-
-        The summary is a snippet around the query within the article text or
-        summary. The max_length parameter controls the length of the snippet.
-        """
-        logger.info(f"Tool: Getting query-focused summary for article: {title}, query: {query}")
+    ):
+        logger.info("Tool: Getting query-focused summary for article: %s, query: %s", title, query)
         summary = wikipedia_client.summarize_for_query(title, query, max_length=max_length)
         return {"title": title, "query": query, "summary": summary}
 
-    # ------------------------------------------------------------------
-    # Tool: summarize_article_section
-    # ------------------------------------------------------------------
-    @server.tool()
+    @register_tool("summarize_article_section", model_output_schema(SectionSummaryResponse))
     def summarize_article_section(
         title: str,
         section_title: str,
         max_length: Annotated[int, Field(title="Max Length")] = 150,
-    ) -> Dict[str, Any]:
-        """
-        Get a summary of a specific section of a Wikipedia article.
-
-        Returns a dictionary containing the section summary or an error.
-        """
-        logger.info(f"Tool: Getting summary for section: {section_title} in article: {title}")
+    ):
+        logger.info("Tool: Getting summary for section: %s in article: %s", section_title, title)
         summary = wikipedia_client.summarize_section(title, section_title, max_length=max_length)
         return {"title": title, "section_title": section_title, "summary": summary}
 
-    # ------------------------------------------------------------------
-    # Tool: extract_key_facts
-    # ------------------------------------------------------------------
-    @server.tool()
+    @register_tool("extract_key_facts", model_output_schema(KeyFactsResponse))
     def extract_key_facts(
         title: str,
         topic_within_article: Annotated[str, Field(title="Topic Within Article")] = "",
         count: int = 5,
-    ) -> Dict[str, Any]:
-        """
-        Extract key facts from a Wikipedia article, optionally focused on a topic.
-
-        Returns a dictionary containing a list of facts.
-        """
-        logger.info(f"Tool: Extracting key facts for article: {title}, topic: {topic_within_article}")
+    ):
+        logger.info("Tool: Extracting key facts for article: %s, topic: %s", title, topic_within_article)
         topic = topic_within_article if topic_within_article.strip() else None
         facts = wikipedia_client.extract_facts(title, topic, count=count)
         return {"title": title, "topic_within_article": topic_within_article, "facts": facts}
 
-    # ------------------------------------------------------------------
-    # Tool: get_related_topics
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_related_topics(title: str, limit: int = 10) -> Dict[str, Any]:
-        """
-        Get topics related to a Wikipedia article based on links and categories.
-
-        Returns a list of related topics up to the specified limit.
-        """
-        logger.info(f"Tool: Getting related topics for: {title}")
+    @register_tool("get_related_topics", model_output_schema(RelatedTopicsResponse))
+    def get_related_topics(title: str, limit: int = 10):
+        logger.info("Tool: Getting related topics for: %s", title)
         related = wikipedia_client.get_related_topics(title, limit=limit)
         return {"title": title, "related_topics": related}
 
-    # ------------------------------------------------------------------
-    # Tool: get_sections
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_sections(title: str) -> Dict[str, Any]:
-        """
-        Get the sections of a Wikipedia article.
-
-        Returns a dictionary with the article title and list of sections.
-        """
-        logger.info(f"Tool: Getting sections for: {title}")
+    @register_tool("get_sections", model_output_schema(SectionsResponse))
+    def get_sections(title: str):
+        logger.info("Tool: Getting sections for: %s", title)
         sections = wikipedia_client.get_sections(title)
         return {"title": title, "sections": sections}
 
-    # ------------------------------------------------------------------
-    # Tool: get_links
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_links(title: str) -> Dict[str, Any]:
-        """
-        Get the links contained within a Wikipedia article.
-
-        Returns a dictionary with the article title and list of links.
-        """
-        logger.info(f"Tool: Getting links for: {title}")
+    @register_tool("get_links", model_output_schema(LinksResponse))
+    def get_links(title: str):
+        logger.info("Tool: Getting links for: %s", title)
         links = wikipedia_client.get_links(title)
         return {"title": title, "links": links}
 
-    # ------------------------------------------------------------------
-    # Tool: get_coordinates
-    # ------------------------------------------------------------------
-    @server.tool()
-    def get_coordinates(title: str) -> Dict[str, Any]:
-        """
-        Get the coordinates of a Wikipedia article.
-
-        Returns a dictionary containing coordinate information.
-        """
-        logger.info(f"Tool: Getting coordinates for: {title}")
+    @register_tool("get_coordinates", model_output_schema(CoordinatesResponse))
+    def get_coordinates(title: str):
+        """Get geographic coordinates for a Wikipedia article title."""
+        logger.info("Tool: Getting coordinates for: %s", title)
         coordinates = wikipedia_client.get_coordinates(title)
         return coordinates
 
-    # ------------------------------------------------------------------
-    # HTTP Resources
-    # ------------------------------------------------------------------
-
     @server.resource("/search/{query}")
-    def search(query: str) -> Dict[str, Any]:
-        """
-        HTTP resource to search Wikipedia via GET /search/{query}.
-
-        Uses the underlying WikipediaClient.search and always returns a dictionary.
-        """
-        logger.info(f"Searching Wikipedia for: {query}")
+    def search(query: str):
+        logger.info("Searching Wikipedia for: %s", query)
         results = wikipedia_client.search(query, limit=10)
         return {"query": query, "results": results}
 
     @server.resource("/article/{title}")
-    def article(title: str) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch a full article via GET /article/{title}.
-
-        Returns article data or an error dictionary.
-        """
-        logger.info(f"Getting article: {title}")
+    def article(title: str):
+        logger.info("Getting article: %s", title)
         article_data = wikipedia_client.get_article(title)
         return article_data or {"title": title, "exists": False, "error": "Unknown error retrieving article"}
 
     @server.resource("/summary/{title}")
-    def summary(title: str) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch the summary of an article via GET /summary/{title}.
-        """
-        logger.info(f"Getting summary for: {title}")
+    def summary(title: str):
+        logger.info("Getting summary for: %s", title)
         summary_text = wikipedia_client.get_summary(title)
         if summary_text and not summary_text.startswith("Error"):
             return {"title": title, "summary": summary_text}
-        else:
-            return {"title": title, "summary": None, "error": summary_text}
+        return {"title": title, "summary": None, "error": summary_text}
 
     @server.resource("/summary/{title}/query/{query}/length/{max_length}")
-    def summary_for_query_resource(title: str, query: str, max_length: int) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch a query-focused summary via GET /summary/{title}/query/{query}/length/{max_length}.
-        """
+    def summary_for_query_resource(title: str, query: str, max_length: int):
         logger.info(
-            f"Resource: Getting query-focused summary for article: {title}, query: {query}, max_length: {max_length}"
+            "Resource: Getting query-focused summary for article: %s, query: %s, max_length: %d",
+            title,
+            query,
+            max_length,
         )
         summary_text = wikipedia_client.summarize_for_query(title, query, max_length=max_length)
         return {"title": title, "query": query, "summary": summary_text}
 
     @server.resource("/summary/{title}/section/{section_title}/length/{max_length}")
-    def summary_section_resource(title: str, section_title: str, max_length: int) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch a section summary via GET /summary/{title}/section/{section_title}/length/{max_length}.
-        """
+    def summary_section_resource(title: str, section_title: str, max_length: int):
         logger.info(
-            f"Resource: Getting summary for section: {section_title} in article: {title}, max_length: {max_length}"
+            "Resource: Getting summary for section: %s in article: %s, max_length: %d",
+            section_title,
+            title,
+            max_length,
         )
         summary_text = wikipedia_client.summarize_section(title, section_title, max_length=max_length)
         return {"title": title, "section_title": section_title, "summary": summary_text}
 
     @server.resource("/sections/{title}")
-    def sections_resource(title: str) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch sections via GET /sections/{title}.
-        """
-        logger.info(f"Getting sections for: {title}")
+    def sections_resource(title: str):
+        logger.info("Getting sections for: %s", title)
         sections_list = wikipedia_client.get_sections(title)
         return {"title": title, "sections": sections_list}
 
     @server.resource("/links/{title}")
-    def links_resource(title: str) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch links via GET /links/{title}.
-        """
-        logger.info(f"Getting links for: {title}")
+    def links_resource(title: str):
+        logger.info("Getting links for: %s", title)
         links_list = wikipedia_client.get_links(title)
         return {"title": title, "links": links_list}
 
     @server.resource("/facts/{title}/topic/{topic_within_article}/count/{count}")
-    def key_facts_resource(title: str, topic_within_article: str, count: int) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch key facts via GET /facts/{title}/topic/{topic_within_article}/count/{count}.
-        """
+    def key_facts_resource(title: str, topic_within_article: str, count: int):
         logger.info(
-            f"Resource: Extracting key facts for article: {title}, topic: {topic_within_article}, count: {count}"
+            "Resource: Extracting key facts for article: %s, topic: %s, count: %d",
+            title,
+            topic_within_article,
+            count,
         )
         facts_list = wikipedia_client.extract_facts(title, topic_within_article, count=count)
         return {
@@ -355,11 +348,8 @@ def create_server(
         }
 
     @server.resource("/coordinates/{title}")
-    def coordinates_resource(title: str) -> Dict[str, Any]:
-        """
-        HTTP resource to fetch coordinates via GET /coordinates/{title}.
-        """
-        logger.info(f"Getting coordinates for: {title}")
+    def coordinates_resource(title: str):
+        logger.info("Getting coordinates for: %s", title)
         coordinates_data = wikipedia_client.get_coordinates(title)
         return coordinates_data
 

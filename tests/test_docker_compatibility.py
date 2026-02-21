@@ -20,7 +20,7 @@ class TestDockerCompatibility:
         )
         assert result.returncode == 0
         assert "--host HOST" in result.stdout
-        assert "Host to bind SSE server to" in result.stdout
+        assert "Host to bind network server to" in result.stdout
         assert "0.0.0.0 for all interfaces" in result.stdout
 
     def test_host_flag_functionality(self):

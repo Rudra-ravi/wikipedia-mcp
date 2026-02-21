@@ -4,51 +4,56 @@ This document describes the high-level architecture and data flow of the Wikiped
 
 ## Components
 
-- **CLI (`wikipedia_mcp/__main__.py`)**: Parses arguments, configures logging, initializes and starts the server.
-- **Server (`wikipedia_mcp/server.py`)**: Creates a `FastMCP` instance, registers tools and MCP resources, and wires them to the client.
-- **Wikipedia Client (`wikipedia_mcp/wikipedia_client.py`)**: Encapsulates interaction with Wikipedia API, language/country resolution, variant handling, caching, and error handling.
-- **Examples (`examples/`)**: Demonstrates MCP client usage against the server.
-- **Tests (`tests/`)**: Unit and integration tests for CLI, server, and client.
+- **CLI (`wikipedia_mcp/__main__.py`)**: Parses runtime configuration, validates auth/transport options, configures logging, and launches the server.
+- **Auth Config (`wikipedia_mcp/auth_config.py`)**: Validates `--auth-*` options and environment fallbacks into a transport auth config.
+- **Server (`wikipedia_mcp/server.py`)**: Builds `FastMCP`, wires tool/resource handlers, configures JWT auth provider, and exposes static bearer middleware for network transports.
+- **Schemas (`wikipedia_mcp/schemas.py`)**: Pydantic output models used to generate explicit MCP `outputSchema` definitions.
+- **Wikipedia Client (`wikipedia_mcp/wikipedia_client.py`)**: Handles Wikipedia API interaction, language/country mapping, variants, retries, and JSON/error normalization.
+- **Tests (`tests/`)**: Coverage for CLI behavior, tool schemas, auth modes, language/country handling, and compatibility contracts.
 
 ## Data Flow
 
-1. A request arrives via MCP tool call or MCP resource path.
-2. The server routes the request to a registered handler.
-3. The handler delegates to `WikipediaClient` to perform API calls and assemble data.
-4. Results are returned to the caller with structured fields.
+1. A request arrives through MCP tool invocation or resource read.
+2. FastMCP dispatches to a registered handler in `server.py`.
+3. Handler calls `WikipediaClient` methods.
+4. Client performs API/library operations and normalizes errors.
+5. Handler returns structured output aligned with explicit `outputSchema`.
 
-## Language and Country Resolution
+## Transport Model
 
-- Users specify either `--language` or `--country`.
-- Country codes/names map to language or variant (e.g., `CN` → `zh-hans`, `TW` → `zh-tw`).
-- Variants are parsed into base language plus variant flag for Wikipedia API; variant is added to request params when supported.
+- `stdio` (default): local integrations and desktop clients.
+- `http` / `streamable-http`: preferred network deployment transport (endpoint path default `/mcp`).
+- `sse`: legacy compatibility transport.
 
-## Caching
+## Auth Model
 
-- Optional LRU cache (`--enable-cache`) wraps selected client methods: search, get_article, get_summary, get_sections, get_links, get_related_topics, summarize_for_query, summarize_section, extract_facts, get_coordinates.
-- Cache size is limited to avoid unbounded memory growth.
+Auth is only applied to network transports:
 
-## Transports
+- `none`: no request auth.
+- `static`: exact bearer token enforced by ASGI middleware.
+- `jwt`: FastMCP `BearerAuthProvider` validates JWT using public key or JWKS.
 
-- `stdio`: Default for Claude Desktop; logs to stderr, avoids stdout interference.
-- `sse`: HTTP Server-Sent Events; bind with `--host` and `--port`. Use a reverse proxy for auth if exposing publicly.
+This is separate from `--access-token`, which is used for outbound Wikipedia API requests.
 
-## Tools and Resources
+## Tool Surface
 
-- Tools: `search_wikipedia`, `get_article`, `get_summary`, `summarize_article_for_query`, `summarize_article_section`, `extract_key_facts`, `get_related_topics`, `get_sections`, `get_links`, `get_coordinates`, `test_wikipedia_connectivity`.
-- Resources: `search/{query}`, `article/{title}`, `summary/{title}`, `sections/{title}`, `links/{title}`, `coordinates/{title}`, `summary/{title}/query/{query}/length/{max_length}`, `summary/{title}/section/{section_title}/length/{max_length}`, `facts/{title}/topic/{topic_within_article}/count/{count}`.
+- Canonical tools are preserved (`search_wikipedia`, `get_article`, etc.).
+- Each canonical tool also has a discoverability alias prefixed with `wikipedia_`.
+- Tools include MCP annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint`, `destructiveHint`).
 
 ## Error Handling
 
-- Client methods handle HTTP/network errors and return safe defaults with `error` fields where applicable.
-- Search and connectivity tools provide diagnostics to aid troubleshooting.
+- HTTP calls to Wikipedia use bounded retry/backoff on retryable failures.
+- Non-JSON or malformed responses are normalized into actionable error payloads.
+- Connectivity/search/coordinates surface safe fallback outputs instead of uncaught exceptions.
 
-## Security Considerations
+## Security Notes
 
-- SSE transport does not implement built-in auth; protect with a reverse proxy, private network, or firewall.
-- Optional `--access-token` allows authenticated requests where supported to mitigate rate limits.
+- For exposed network transports, prefer `http` + `--auth-mode static|jwt` and private-network/reverse-proxy controls.
+- Avoid logging secrets or bearer tokens.
 
 ## Extensibility
 
-- New tools/resources can be added by extending `WikipediaClient` and registering with `FastMCP` in `server.py`.
-- Keep schemas simple and compatible with strict function-calling clients (e.g., Google ADK).
+- Add new MCP tools in `server.py` and register matching alias + annotations.
+- Add/extend output models in `schemas.py` to keep contracts explicit.
+- Extend `WikipediaClient` with focused methods and keep protocol-facing adaptation in server handlers.

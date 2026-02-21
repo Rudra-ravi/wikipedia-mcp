@@ -12,6 +12,7 @@ import wikipediaapi
 import requests
 from typing import Dict, List, Optional, Any
 import functools
+import time
 from wikipedia_mcp import __version__
 
 logger = logging.getLogger(__name__)
@@ -311,16 +312,22 @@ class WikipediaClient:
 
         if self.enable_cache:
             # Wrap methods with lru_cache to enable caching when requested
-            self.search = functools.lru_cache(maxsize=128)(self.search)
-            self.get_article = functools.lru_cache(maxsize=128)(self.get_article)
-            self.get_summary = functools.lru_cache(maxsize=128)(self.get_summary)
-            self.get_sections = functools.lru_cache(maxsize=128)(self.get_sections)
-            self.get_links = functools.lru_cache(maxsize=128)(self.get_links)
-            self.get_related_topics = functools.lru_cache(maxsize=128)(self.get_related_topics)
-            self.summarize_for_query = functools.lru_cache(maxsize=128)(self.summarize_for_query)
-            self.summarize_section = functools.lru_cache(maxsize=128)(self.summarize_section)
-            self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)
-            self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)
+            self.search = functools.lru_cache(maxsize=128)(self.search)  # type: ignore[method-assign]
+            self.get_article = functools.lru_cache(maxsize=128)(self.get_article)  # type: ignore[method-assign]
+            self.get_summary = functools.lru_cache(maxsize=128)(self.get_summary)  # type: ignore[method-assign]
+            self.get_sections = functools.lru_cache(maxsize=128)(self.get_sections)  # type: ignore[method-assign]
+            self.get_links = functools.lru_cache(maxsize=128)(self.get_links)  # type: ignore[method-assign]
+            self.get_related_topics = functools.lru_cache(maxsize=128)(  # type: ignore[method-assign]
+                self.get_related_topics
+            )
+            self.summarize_for_query = functools.lru_cache(maxsize=128)(  # type: ignore[method-assign]
+                self.summarize_for_query
+            )
+            self.summarize_section = functools.lru_cache(maxsize=128)(  # type: ignore[method-assign]
+                self.summarize_section
+            )
+            self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)  # type: ignore[method-assign]
+            self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)  # type: ignore[method-assign]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -408,6 +415,120 @@ class WikipediaClient:
             params["variant"] = self.language_variant
         return params
 
+    def _request_json(
+        self,
+        *,
+        url: str,
+        params: Dict[str, Any],
+        timeout: int = 30,
+        retries: int = 2,
+        backoff_seconds: float = 0.5,
+    ) -> tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        """
+        Perform a GET request with bounded retry and robust JSON parsing.
+
+        Returns:
+            Tuple of (data, error). Exactly one will be non-None.
+        """
+        last_error: Dict[str, Any] = {
+            "message": "Request failed",
+            "error_type": "UnknownError",
+        }
+
+        for attempt in range(retries + 1):
+            try:
+                response = requests.get(
+                    url,
+                    headers=self._get_request_headers(),
+                    params=params,
+                    timeout=timeout,
+                )
+            except requests.exceptions.Timeout as exc:
+                last_error = {
+                    "message": f"Request timed out: {exc}",
+                    "error_type": "Timeout",
+                }
+            except requests.exceptions.ConnectionError as exc:
+                last_error = {
+                    "message": f"Connection error: {exc}",
+                    "error_type": "ConnectionError",
+                }
+            except requests.exceptions.RequestException as exc:
+                last_error = {
+                    "message": f"Request exception: {exc}",
+                    "error_type": type(exc).__name__,
+                }
+            else:
+                status_code_raw = getattr(response, "status_code", 200)
+                status_code = status_code_raw if isinstance(status_code_raw, int) else 200
+                retryable_status = status_code in {429, 500, 502, 503, 504}
+                if retryable_status and attempt < retries:
+                    wait_seconds = backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "Retryable HTTP status %s from Wikipedia API (attempt %s/%s); retrying in %.2fs",
+                        status_code,
+                        attempt + 1,
+                        retries + 1,
+                        wait_seconds,
+                    )
+                    time.sleep(wait_seconds)
+                    continue
+
+                try:
+                    response.raise_for_status()
+                except requests.exceptions.HTTPError as exc:
+                    if retryable_status and attempt < retries:
+                        wait_seconds = backoff_seconds * (2**attempt)
+                        logger.warning(
+                            "Retryable HTTP error from Wikipedia API (attempt %s/%s); retrying in %.2fs: %s",
+                            attempt + 1,
+                            retries + 1,
+                            wait_seconds,
+                            exc,
+                        )
+                        time.sleep(wait_seconds)
+                        continue
+                    preview = (response.text or "")[:200]
+                    return None, {
+                        "message": f"HTTP {status_code} from Wikipedia API: {exc}",
+                        "error_type": "HTTPError",
+                        "status_code": status_code,
+                        "body_preview": preview,
+                    }
+
+                if status_code >= 400:
+                    preview = (response.text or "")[:200]
+                    return None, {
+                        "message": f"HTTP {status_code} from Wikipedia API",
+                        "error_type": "HTTPError",
+                        "status_code": status_code,
+                        "body_preview": preview,
+                    }
+
+                try:
+                    return response.json(), None
+                except ValueError as exc:
+                    preview = (response.text or "")[:200]
+                    return None, {
+                        "message": f"Invalid JSON response from Wikipedia API: {exc}",
+                        "error_type": "JSONDecodeError",
+                        "status_code": status_code,
+                        "body_preview": preview,
+                    }
+
+            if attempt < retries:
+                wait_seconds = backoff_seconds * (2**attempt)
+                logger.warning(
+                    "Wikipedia API request failed (%s), retrying in %.2fs (attempt %s/%s)",
+                    last_error.get("error_type", "UnknownError"),
+                    wait_seconds,
+                    attempt + 1,
+                    retries + 1,
+                )
+                time.sleep(wait_seconds)
+
+        return None, last_error
+
     # ------------------------------------------------------------------
     # Diagnostics
     # ------------------------------------------------------------------
@@ -429,16 +550,22 @@ class WikipediaClient:
 
         try:
             logger.info(f"Testing connectivity to {test_url}")
-            response = requests.get(
-                test_url,
-                headers=self._get_request_headers(),
+            data, error = self._request_json(
+                url=test_url,
                 params=test_params,
                 timeout=10,
+                retries=1,
             )
-            response.raise_for_status()
-            data = response.json()
+            if error:
+                return {
+                    "status": "failed",
+                    "url": test_url,
+                    "language": self.base_language,
+                    "error": error.get("message", "Connectivity test failed"),
+                    "error_type": error.get("error_type", "RequestError"),
+                }
 
-            site_info = data.get("query", {}).get("general", {})
+            site_info = (data or {}).get("query", {}).get("general", {})
 
             return {
                 "status": "success",
@@ -446,8 +573,7 @@ class WikipediaClient:
                 "language": self.base_language,
                 "site_name": site_info.get("sitename", "Unknown"),
                 "server": site_info.get("server", "Unknown"),
-                # Round response time to milliseconds with high precision
-                "response_time_ms": response.elapsed.total_seconds() * 1000,
+                "response_time_ms": None,
             }
 
         except Exception as exc:  # pragma: no cover - safeguarded
@@ -506,17 +632,22 @@ class WikipediaClient:
 
         try:
             logger.debug("Making search request to %s with params %s", self.api_url, params)
-            response = requests.get(
-                self.api_url,
-                headers=self._get_request_headers(),
+            data, error = self._request_json(
+                url=self.api_url,
                 params=params,
                 timeout=30,
+                retries=2,
             )
-            response.raise_for_status()
-            data = response.json()
+            if error:
+                logger.error(
+                    "Search request failed for query '%s': %s",
+                    trimmed_query,
+                    error.get("message", "Request failed"),
+                )
+                return []
 
-            if "error" in data:
-                error_info = data["error"]
+            if "error" in (data or {}):
+                error_info = (data or {})["error"]
                 logger.error(
                     "Wikipedia API error: %s - %s",
                     error_info.get("code", "unknown"),
@@ -524,11 +655,11 @@ class WikipediaClient:
                 )
                 return []
 
-            if "warnings" in data:
-                for warning_type, warning_body in data["warnings"].items():
+            if "warnings" in (data or {}):
+                for warning_type, warning_body in (data or {})["warnings"].items():
                     logger.warning("Wikipedia API warning (%s): %s", warning_type, warning_body)
 
-            query_data = data.get("query", {})
+            query_data = (data or {}).get("query", {})
             search_results = query_data.get("search", [])
             logger.info(
                 "Search for '%s' returned %d results",
@@ -942,11 +1073,21 @@ class WikipediaClient:
         params = self._add_variant_to_params(params)
 
         try:
-            response = requests.get(self.api_url, headers=self._get_request_headers(), params=params)
-            response.raise_for_status()
-            data = response.json()
+            data, error = self._request_json(
+                url=self.api_url,
+                params=params,
+                timeout=30,
+                retries=2,
+            )
+            if error:
+                return {
+                    "title": title,
+                    "coordinates": None,
+                    "exists": False,
+                    "error": error.get("message", "Failed to fetch coordinates"),
+                }
 
-            pages = data.get("query", {}).get("pages", {})
+            pages = (data or {}).get("query", {}).get("pages", {})
 
             if not pages:
                 return {

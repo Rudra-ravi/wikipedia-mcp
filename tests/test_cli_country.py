@@ -72,8 +72,8 @@ class TestCountryCLI:
             text=True,
         )
 
-        assert result.returncode == 0  # Should exit gracefully
-        assert "Cannot specify both --language and --country" in result.stdout
+        assert result.returncode != 0
+        assert "Cannot specify both --language and --country" in result.stderr
 
     def test_cli_country_start_timeout(self):
         """Test that server starts successfully with country code."""

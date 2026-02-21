@@ -26,7 +26,7 @@ class TestPortConfiguration:
         )
         assert result.returncode == 0
         assert "--port PORT" in result.stdout
-        assert "Port for SSE transport" in result.stdout
+        assert "Port for network transports" in result.stdout
 
     def test_port_default_value(self):
         """Test that port defaults to 8000."""
@@ -146,6 +146,21 @@ class TestHostConfiguration:
             timeout=10,
         )
         assert result.returncode == 0
+
+
+class TestModernTransportConfiguration:
+    """Test modern transport support and endpoint path configuration."""
+
+    def test_cli_path_argument(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "wikipedia_mcp", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0
+        assert "--path PATH" in result.stdout
+        assert "Endpoint path for HTTP/streamable-http transport" in result.stdout
 
 
 class TestCachingFunctionality:
