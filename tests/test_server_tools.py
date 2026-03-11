@@ -491,6 +491,39 @@ class TestMCPServerTools:
         tool_names = asyncio.run(gather_tools())
         assert "test_wikipedia_connectivity" in tool_names
 
+    def test_all_tool_descriptions_present_for_canonical_and_alias_tools(self):
+        """Ensure canonical tools and wikipedia_ aliases expose descriptions."""
+        server = create_server()
+        assert server is not None
+
+        async def gather_tools_map():
+            return await get_tools(server)
+
+        tools = asyncio.run(gather_tools_map())
+        expected_descriptions = {
+            "search_wikipedia": "Search Wikipedia for articles matching a query.",
+            "test_wikipedia_connectivity": "Provide diagnostics for Wikipedia API connectivity.",
+            "get_article": "Get the full content of a Wikipedia article.",
+            "get_summary": "Get a summary of a Wikipedia article.",
+            "summarize_article_for_query": "Get a summary of a Wikipedia article tailored to a specific query.",
+            "summarize_article_section": "Get a summary of a specific section of a Wikipedia article.",
+            "extract_key_facts": "Extract key facts from a Wikipedia article, optionally focused on a topic.",
+            "get_related_topics": "Get topics related to a Wikipedia article based on links and categories.",
+            "get_sections": "Get the sections of a Wikipedia article.",
+            "get_links": "Get the links contained within a Wikipedia article.",
+            "get_coordinates": "Get the coordinates of a Wikipedia article.",
+        }
+
+        for tool_name, expected_description in expected_descriptions.items():
+            assert tool_name in tools
+            canonical_description = tools[tool_name].description
+            assert canonical_description
+            assert canonical_description.startswith(expected_description)
+
+            alias_name = f"wikipedia_{tool_name}"
+            assert alias_name in tools
+            assert tools[alias_name].description == canonical_description
+
 
 class TestIntegration:
     """Integration tests for the complete system."""
