@@ -1,4 +1,10 @@
-"""Wikipedia MCP server implementation."""
+"""
+Wikipedia MCP server implementation.
+
+This module defines the FastMCP server and registers tools and resources for
+interacting with Wikipedia via the WikipediaClient. It includes search,
+article retrieval, summaries, and diagnostics.
+"""
 
 import logging
 from typing import Annotated, Any, Literal, Optional, cast
@@ -171,6 +177,17 @@ def create_server(
 
     @register_tool("search_wikipedia", model_output_schema(SearchWikipediaResponse))
     def search_wikipedia(query: str, limit: int = 10):
+        """
+        Search Wikipedia for articles matching a query.
+
+        Parameters:
+            query: The search term to look up on Wikipedia.
+            limit: Maximum number of results to return (1-500).
+
+        Returns a dictionary with the search query, results, status, and
+        additional metadata. If the query is empty or invalid, the status
+        will be 'error' and an explanatory message is included.
+        """
         logger.info("Tool: Searching Wikipedia for '%s' (limit=%d)", query, limit)
 
         if not query or not query.strip():
@@ -210,6 +227,13 @@ def create_server(
 
     @register_tool("test_wikipedia_connectivity", model_output_schema(ConnectivityResponse))
     def test_wikipedia_connectivity():
+        """
+        Provide diagnostics for Wikipedia API connectivity.
+
+        Returns the base API URL, language, site information, and response
+        time in milliseconds. If connectivity fails, status will be 'failed'
+        with error details.
+        """
         logger.info("Tool: Testing Wikipedia connectivity")
         diagnostics = wikipedia_client.test_connectivity()
 
@@ -223,12 +247,24 @@ def create_server(
 
     @register_tool("get_article", model_output_schema(ArticleResponse))
     def get_article(title: str):
+        """
+        Get the full content of a Wikipedia article.
+
+        Returns a dictionary containing article details or an error message
+        if retrieval fails.
+        """
         logger.info("Tool: Getting article: %s", title)
         article = wikipedia_client.get_article(title)
         return article or {"title": title, "exists": False, "error": "Unknown error retrieving article"}
 
     @register_tool("get_summary", model_output_schema(SummaryResponse))
     def get_summary(title: str):
+        """
+        Get a summary of a Wikipedia article.
+
+        Returns a dictionary with the title and summary string. On error,
+        includes an error message instead of a summary.
+        """
         logger.info("Tool: Getting summary for: %s", title)
         summary = wikipedia_client.get_summary(title)
         if summary and not summary.startswith("Error"):
@@ -241,6 +277,12 @@ def create_server(
         query: str,
         max_length: Annotated[int, Field(title="Max Length")] = 250,
     ):
+        """
+        Get a summary of a Wikipedia article tailored to a specific query.
+
+        The summary is a snippet around the query within the article text or
+        summary. The max_length parameter controls the length of the snippet.
+        """
         logger.info("Tool: Getting query-focused summary for article: %s, query: %s", title, query)
         summary = wikipedia_client.summarize_for_query(title, query, max_length=max_length)
         return {"title": title, "query": query, "summary": summary}
@@ -251,6 +293,11 @@ def create_server(
         section_title: str,
         max_length: Annotated[int, Field(title="Max Length")] = 150,
     ):
+        """
+        Get a summary of a specific section of a Wikipedia article.
+
+        Returns a dictionary containing the section summary or an error.
+        """
         logger.info("Tool: Getting summary for section: %s in article: %s", section_title, title)
         summary = wikipedia_client.summarize_section(title, section_title, max_length=max_length)
         return {"title": title, "section_title": section_title, "summary": summary}
@@ -261,6 +308,11 @@ def create_server(
         topic_within_article: Annotated[str, Field(title="Topic Within Article")] = "",
         count: int = 5,
     ):
+        """
+        Extract key facts from a Wikipedia article, optionally focused on a topic.
+
+        Returns a dictionary containing a list of facts.
+        """
         logger.info("Tool: Extracting key facts for article: %s, topic: %s", title, topic_within_article)
         topic = topic_within_article if topic_within_article.strip() else None
         facts = wikipedia_client.extract_facts(title, topic, count=count)
@@ -268,43 +320,75 @@ def create_server(
 
     @register_tool("get_related_topics", model_output_schema(RelatedTopicsResponse))
     def get_related_topics(title: str, limit: int = 10):
+        """
+        Get topics related to a Wikipedia article based on links and categories.
+
+        Returns a list of related topics up to the specified limit.
+        """
         logger.info("Tool: Getting related topics for: %s", title)
         related = wikipedia_client.get_related_topics(title, limit=limit)
         return {"title": title, "related_topics": related}
 
     @register_tool("get_sections", model_output_schema(SectionsResponse))
     def get_sections(title: str):
+        """
+        Get the sections of a Wikipedia article.
+
+        Returns a dictionary with the article title and list of sections.
+        """
         logger.info("Tool: Getting sections for: %s", title)
         sections = wikipedia_client.get_sections(title)
         return {"title": title, "sections": sections}
 
     @register_tool("get_links", model_output_schema(LinksResponse))
     def get_links(title: str):
+        """
+        Get the links contained within a Wikipedia article.
+
+        Returns a dictionary with the article title and list of links.
+        """
         logger.info("Tool: Getting links for: %s", title)
         links = wikipedia_client.get_links(title)
         return {"title": title, "links": links}
 
     @register_tool("get_coordinates", model_output_schema(CoordinatesResponse))
     def get_coordinates(title: str):
-        """Get geographic coordinates for a Wikipedia article title."""
+        """
+        Get the coordinates of a Wikipedia article.
+
+        Returns a dictionary containing coordinate information.
+        """
         logger.info("Tool: Getting coordinates for: %s", title)
         coordinates = wikipedia_client.get_coordinates(title)
         return coordinates
 
     @server.resource("/search/{query}")
     def search(query: str):
+        """
+        HTTP resource to search Wikipedia via GET /search/{query}.
+
+        Uses the underlying WikipediaClient.search and always returns a dictionary.
+        """
         logger.info("Searching Wikipedia for: %s", query)
         results = wikipedia_client.search(query, limit=10)
         return {"query": query, "results": results}
 
     @server.resource("/article/{title}")
     def article(title: str):
+        """
+        HTTP resource to fetch a full article via GET /article/{title}.
+
+        Returns article data or an error dictionary.
+        """
         logger.info("Getting article: %s", title)
         article_data = wikipedia_client.get_article(title)
         return article_data or {"title": title, "exists": False, "error": "Unknown error retrieving article"}
 
     @server.resource("/summary/{title}")
     def summary(title: str):
+        """
+        HTTP resource to fetch the summary of an article via GET /summary/{title}.
+        """
         logger.info("Getting summary for: %s", title)
         summary_text = wikipedia_client.get_summary(title)
         if summary_text and not summary_text.startswith("Error"):
@@ -313,6 +397,9 @@ def create_server(
 
     @server.resource("/summary/{title}/query/{query}/length/{max_length}")
     def summary_for_query_resource(title: str, query: str, max_length: int):
+        """
+        HTTP resource to fetch a query-focused summary via GET /summary/{title}/query/{query}/length/{max_length}.
+        """
         logger.info(
             "Resource: Getting query-focused summary for article: %s, query: %s, max_length: %d",
             title,
@@ -324,6 +411,9 @@ def create_server(
 
     @server.resource("/summary/{title}/section/{section_title}/length/{max_length}")
     def summary_section_resource(title: str, section_title: str, max_length: int):
+        """
+        HTTP resource to fetch a section summary via GET /summary/{title}/section/{section_title}/length/{max_length}.
+        """
         logger.info(
             "Resource: Getting summary for section: %s in article: %s, max_length: %d",
             section_title,
@@ -335,18 +425,27 @@ def create_server(
 
     @server.resource("/sections/{title}")
     def sections_resource(title: str):
+        """
+        HTTP resource to fetch sections via GET /sections/{title}.
+        """
         logger.info("Getting sections for: %s", title)
         sections_list = wikipedia_client.get_sections(title)
         return {"title": title, "sections": sections_list}
 
     @server.resource("/links/{title}")
     def links_resource(title: str):
+        """
+        HTTP resource to fetch links via GET /links/{title}.
+        """
         logger.info("Getting links for: %s", title)
         links_list = wikipedia_client.get_links(title)
         return {"title": title, "links": links_list}
 
     @server.resource("/facts/{title}/topic/{topic_within_article}/count/{count}")
     def key_facts_resource(title: str, topic_within_article: str, count: int):
+        """
+        HTTP resource to fetch key facts via GET /facts/{title}/topic/{topic_within_article}/count/{count}.
+        """
         logger.info(
             "Resource: Extracting key facts for article: %s, topic: %s, count: %d",
             title,
@@ -362,6 +461,9 @@ def create_server(
 
     @server.resource("/coordinates/{title}")
     def coordinates_resource(title: str):
+        """
+        HTTP resource to fetch coordinates via GET /coordinates/{title}.
+        """
         logger.info("Getting coordinates for: %s", title)
         coordinates_data = wikipedia_client.get_coordinates(title)
         return coordinates_data
