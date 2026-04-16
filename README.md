@@ -1,6 +1,7 @@
 # Wikipedia MCP Server
 
 [![smithery badge](https://smithery.ai/badge/@Rudra-ravi/wikipedia-mcp)](https://smithery.ai/server/@Rudra-ravi/wikipedia-mcp)
+[![Listed on Spark](https://img.shields.io/badge/Listed%20on-Spark-blue)](https://spark.entire.vc/assets/vb-wikipedia-mcp)
 
 A Model Context Protocol (MCP) server that retrieves information from Wikipedia to provide context to Large Language Models (LLMs). This tool helps AI assistants access factual information from Wikipedia to ground their responses in reliable sources.
 
