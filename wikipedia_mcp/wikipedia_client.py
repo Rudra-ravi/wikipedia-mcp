@@ -1123,11 +1123,12 @@ class WikipediaClient:
             # Normalize to the public boolean schema before MCP validation.
             processed_coordinates = []
             for coord in coordinates:
+                primary_marker = coord.get("primary")
                 processed_coordinates.append(
                     {
                         "latitude": coord.get("lat"),
                         "longitude": coord.get("lon"),
-                        "primary": coord.get("primary", False) == "" or coord.get("primary", False) is True,
+                        "primary": primary_marker == "" or primary_marker is True,
                         "globe": coord.get("globe", "earth"),
                         "type": coord.get("type", ""),
                         "name": coord.get("name", ""),
