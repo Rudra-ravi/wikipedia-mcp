@@ -1119,14 +1119,15 @@ class WikipediaClient:
                     "message": "No coordinates available for this article",
                 }
 
-            # Process coordinates - typically there's one primary coordinate
+            # MediaWiki marker fields can be returned as an empty string.
+            # Normalize to the public boolean schema before MCP validation.
             processed_coordinates = []
             for coord in coordinates:
                 processed_coordinates.append(
                     {
                         "latitude": coord.get("lat"),
                         "longitude": coord.get("lon"),
-                        "primary": coord.get("primary", False),
+                        "primary": coord.get("primary", False) == "" or coord.get("primary", False) is True,
                         "globe": coord.get("globe", "earth"),
                         "type": coord.get("type", ""),
                         "name": coord.get("name", ""),

@@ -163,6 +163,36 @@ class TestWikipediaClientCoordinates:
         assert secondary_coord["name"] == "Secondary location"
 
     @patch("wikipedia_mcp.wikipedia_client.requests.get")
+    def test_get_coordinates_normalizes_mediawiki_primary_marker(self, mock_get):
+        """Test MediaWiki primary coordinate marker is returned as a boolean."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "query": {
+                "pages": {
+                    "14533": {
+                        "pageid": 14533,
+                        "title": "Mount Everest",
+                        "coordinates": [
+                            {
+                                "lat": 27.98805556,
+                                "lon": 86.925,
+                                "primary": "",
+                                "globe": "earth",
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+        mock_get.return_value = mock_response
+
+        result = self.client.get_coordinates("Mount Everest")
+
+        assert result["exists"] is True
+        assert result["coordinates"][0]["primary"] is True
+
+    @patch("wikipedia_mcp.wikipedia_client.requests.get")
     def test_get_coordinates_api_error(self, mock_get):
         """Test handling of API errors."""
         # Mock API error
