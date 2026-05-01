@@ -1,8 +1,0 @@
-{
-  "tag_name": "v2.0.0",
-  "target_commitish": "main",
-  "name": "Wikipedia MCP v2.0.0",
-  "body": "## Wikipedia MCP v2.0.0\n\n### Added\n- Streamable HTTP transport support and `--path` endpoint configuration.\n- Optional MCP transport auth modes (`none`, `static`, `jwt`) via new `--auth-*` flags.\n- `wikipedia_*` aliases for all MCP tools and explicit tool behavior annotations.\n- Explicit output schemas generated from Pydantic models.\n\n### Fixed\n- Suppressed FastMCP banner output in stdio mode to avoid protocol-adjacent startup noise.\n- Hardened Wikipedia HTTP handling with retry/backoff and malformed JSON safeguards.\n- Improved resilience for connectivity/search/coordinates tool flows.\n\n### Changed\n- Major release 2.0.0 to formalize transport/auth modernization and compatibility guarantees.\n- Clarified separation of Wikipedia API token (`--access-token`) vs MCP transport auth (`--auth-*`).\n- Marked SSE transport as legacy compatibility mode in CLI/docs while keeping support.",
-  "draft": false,
-  "prerelease": false
-} 
