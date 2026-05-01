@@ -240,6 +240,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ format('refs/tags/v{0}', needs.prepare-release.outputs.version) }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -338,8 +340,17 @@ jobs:
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
           echo "🔍 Verifying PyPI upload..."
-          sleep 10  # Wait for PyPI to process
-          pip install wikipedia-mcp==$VERSION --force-reinstall
+          for attempt in {1..12}; do
+            if pip install wikipedia-mcp==$VERSION --force-reinstall; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "❌ wikipedia-mcp==$VERSION was not available from PyPI after waiting."
+              exit 1
+            fi
+            echo "⏳ PyPI package not available yet; retrying in 10 seconds..."
+            sleep 10
+          done
           wikipedia-mcp --help
           echo "✅ PyPI upload verified successfully"
 
