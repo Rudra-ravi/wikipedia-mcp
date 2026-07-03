@@ -26,6 +26,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Retrieve Article Content**: Get full article text with all information
 - **Article Summaries**: Get concise summaries of articles
 - **Section Extraction**: Retrieve specific sections from articles
+- **Table Extraction**: Read tables from articles as structured rows — list tables (with the section each appears under), count entries, and fetch a whole table or an individual row/column/cell
 - **Link Discovery**: Find links within articles to related topics
 - **Related Topics**: Discover topics related to a specific article
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
@@ -390,6 +391,42 @@ Extract key facts from a Wikipedia article, optionally focused on a specific top
 **Returns:**
 - A dictionary containing the title, topic, and a list of extracted facts
 
+### `get_tables`
+
+Extract tables from a Wikipedia article. Parses the article's rendered HTML into structured rows; citation markers (e.g. `[1]`, `[a]`) are stripped and `colspan`/`rowspan` cells are expanded.
+
+**Parameters:**
+- `title` (string): The title of the Wikipedia article
+- `include_all_tables` (boolean, optional): Include infoboxes/navboxes as well as data tables (default: false)
+
+**Returns:**
+- A dictionary with a list of tables, each with a `caption`, `section` (the article section it appears under), `headers`, and `rows`
+
+### `list_tables`
+
+List the tables in an article without their contents — useful for discovering which table to fetch, which section it belongs to, and how many entries (rows) each contains.
+
+**Parameters:**
+- `title` (string): The title of the Wikipedia article
+- `include_all_tables` (boolean, optional): Include infoboxes/navboxes as well (default: false)
+
+**Returns:**
+- A dictionary with the table `count` and per-table metadata (`index`, `caption`, `section`, `headers`, `row_count`, `column_count`). `section` is `""` for tables in the lead/introduction.
+
+### `get_table`
+
+Fetch a single table, or a specific row, column, or cell within it.
+
+**Parameters:**
+- `title` (string): The title of the Wikipedia article
+- `table_index` (integer, optional): Which table to fetch (0-based; default: 0)
+- `row` (integer, optional): A 0-based data-row index; if `>= 0`, only that row is returned
+- `column` (string, optional): A column reference — either a 0-based index (as a string, e.g. `"2"`) or a header name (case-insensitive); if set, only that column is returned
+- `include_all_tables` (boolean, optional): Index into all tables rather than just data tables (default: false)
+
+**Returns:**
+- The whole table (default), a single row, a single column, or a single cell (when both `row` and `column` are given)
+
 ## Country/Locale Support
 
 The Wikipedia MCP server supports intuitive country and region codes as an alternative to language codes. This makes it easier to access region-specific Wikipedia content without needing to know language codes.
@@ -562,6 +599,9 @@ The server also provides MCP resources (similar to HTTP endpoints but for MCP):
 - `sections/{title}`: Get the sections of a Wikipedia article
 - `links/{title}`: Get the links in a Wikipedia article
 - `coordinates/{title}`: Get the coordinates of a Wikipedia article
+- `tables/{title}`: Get all data tables in a Wikipedia article
+- `tables/{title}/list`: List the tables in an article with row/column counts
+- `tables/{title}/index/{table_index}`: Get a single table by index
 - `summary/{title}/query/{query}/length/{max_length}`: Get a query-focused summary of an article
 - `summary/{title}/section/{section_title}/length/{max_length}`: Get a summary of a specific article section
 - `facts/{title}/topic/{topic_within_article}/count/{count}`: Extract key facts from an article

@@ -512,6 +512,9 @@ class TestMCPServerTools:
             "get_sections": "Get the sections of a Wikipedia article.",
             "get_links": "Get the links contained within a Wikipedia article.",
             "get_coordinates": "Get the coordinates of a Wikipedia article.",
+            "get_tables": "Extract tables from a Wikipedia article.",
+            "list_tables": "List the tables in a Wikipedia article without their full contents.",
+            "get_table": "Fetch a single Wikipedia table, or a specific row/column/cell within it.",
         }
 
         for tool_name, expected_description in expected_descriptions.items():

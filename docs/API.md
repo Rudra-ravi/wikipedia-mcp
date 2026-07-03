@@ -211,6 +211,100 @@ Get the coordinates of a Wikipedia article.
 }
 ```
 
+### get_tables
+Extract tables from a Wikipedia article. Parses the article's rendered HTML and returns each table as headers plus data rows. Citation markers (e.g. `[1]`, `[a]`) are stripped and `colspan`/`rowspan` cells are expanded.
+
+**Parameters:**
+- `title` (string, required): The title of the Wikipedia article
+- `include_all_tables` (boolean, optional, default=false): When false, only data tables (`class="wikitable"`) are returned; when true, infoboxes, navboxes, and other tables are included
+
+**Response:**
+```json
+{
+  "title": "List of countries by population (United Nations)",
+  "exists": true,
+  "tables": [
+    {
+      "index": 0,
+      "caption": "List of countries and territories by population",
+      "section": "",
+      "headers": ["Country or territory", "Population (1 July 2023)", "UN continental region"],
+      "rows": [
+        ["India", "1,438,069,596", "Asia"],
+        ["China", "1,422,584,933", "Asia"]
+      ]
+    }
+  ]
+}
+```
+
+Each table's `section` is the article section it appears under (`""` for the lead/introduction).
+
+### list_tables
+List the tables in an article without their full contents — useful for discovering which table to fetch, which section it belongs to, and how many entries each has.
+
+**Parameters:**
+- `title` (string, required): The article title
+- `include_all_tables` (boolean, optional, default=false): Include infoboxes/navboxes as well
+
+**Response:**
+```json
+{
+  "title": "List of countries by population (United Nations)",
+  "exists": true,
+  "count": 1,
+  "tables": [
+    {
+      "index": 0,
+      "caption": "List of countries and territories by population",
+      "section": "",
+      "headers": ["Country or territory", "Population (1 July 2023)", "UN continental region"],
+      "row_count": 238,
+      "column_count": 6
+    }
+  ]
+}
+```
+
+### get_table
+Fetch a single table, or a specific row, column, or cell within it.
+
+**Parameters:**
+- `title` (string, required): The article title
+- `table_index` (integer, optional, default=0): Which table to fetch (0-based; see `list_tables`)
+- `row` (integer, optional, default=-1): A 0-based data-row index. If `>= 0`, only that row is returned
+- `column` (string, optional, default=""): A column reference — either a 0-based index (as a string, e.g. `"2"`) or a header name (case-insensitive). If set, only that column is returned
+- `include_all_tables` (boolean, optional, default=false): Index into all tables rather than just data tables
+
+With neither `row` nor `column`, the whole table is returned. Supplying both returns a single cell.
+
+**Response (whole table):**
+```json
+{
+  "title": "List of countries by population (United Nations)",
+  "exists": true,
+  "table_index": 0,
+  "caption": "List of countries and territories by population",
+  "section": "",
+  "headers": ["Country or territory", "Population (1 July 2023)", "UN continental region"],
+  "rows": [["India", "1,438,069,596", "Asia"]],
+  "row_count": 238,
+  "column_count": 6
+}
+```
+
+**Response (single column, `column="Country or territory"`):**
+```json
+{
+  "title": "List of countries by population (United Nations)",
+  "exists": true,
+  "table_index": 0,
+  "column_index": 0,
+  "header": "Country or territory",
+  "values": ["World", "India", "China", "United States"]
+}
+```
+
 ### summarize_article_for_query
 Get a summary of a Wikipedia article tailored to a specific query.
 
@@ -293,6 +387,9 @@ These are exposed as MCP resources and available when running with SSE transport
 - `sections/{title}`
 - `links/{title}`
 - `coordinates/{title}`
+- `tables/{title}`
+- `tables/{title}/list`
+- `tables/{title}/index/{table_index}`
 - `summary/{title}/query/{query}/length/{max_length}`
 - `summary/{title}/section/{section_title}/length/{max_length}`
 - `facts/{title}/topic/{topic_within_article}/count/{count}`

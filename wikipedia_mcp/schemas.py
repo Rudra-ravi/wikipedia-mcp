@@ -111,6 +111,66 @@ class CoordinatesResponse(MCPBaseModel):
     message: Optional[str] = None
 
 
+class TableItem(MCPBaseModel):
+    index: int
+    caption: str = ""
+    section: str = ""
+    headers: list[str] = []
+    rows: list[list[str]] = []
+
+
+class TablesResponse(MCPBaseModel):
+    title: str
+    exists: bool
+    tables: list[TableItem] = []
+    error: Optional[str] = None
+    message: Optional[str] = None
+
+
+class TableSummary(MCPBaseModel):
+    index: int
+    caption: str = ""
+    section: str = ""
+    headers: list[str] = []
+    row_count: int = 0
+    column_count: int = 0
+
+
+class ListTablesResponse(MCPBaseModel):
+    title: str
+    exists: bool
+    count: int = 0
+    tables: list[TableSummary] = []
+    error: Optional[str] = None
+    message: Optional[str] = None
+
+
+class GetTableResponse(MCPBaseModel):
+    """Response for get_table.
+
+    Depending on the requested granularity this returns a whole table, a single
+    row, a single column, or a single cell, so most fields are optional.
+    """
+
+    title: str
+    exists: bool
+    table_index: Optional[int] = None
+    caption: Optional[str] = None
+    section: Optional[str] = None
+    headers: Optional[list[str]] = None
+    rows: Optional[list[list[str]]] = None
+    row_count: Optional[int] = None
+    column_count: Optional[int] = None
+    row_index: Optional[int] = None
+    row: Optional[list[str]] = None
+    column_index: Optional[int] = None
+    header: Optional[str] = None
+    value: Optional[str] = None
+    values: Optional[list[str]] = None
+    error: Optional[str] = None
+    message: Optional[str] = None
+
+
 def model_output_schema(model: type[MCPBaseModel]) -> dict[str, Any]:
     """Return object JSON schema suitable for MCP tool outputSchema."""
     return model.model_json_schema()
