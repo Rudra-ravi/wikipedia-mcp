@@ -22,14 +22,17 @@ from wikipedia_mcp.schemas import (
     ArticleResponse,
     ConnectivityResponse,
     CoordinatesResponse,
+    GetTableResponse,
     KeyFactsResponse,
     LinksResponse,
+    ListTablesResponse,
     QuerySummaryResponse,
     RelatedTopicsResponse,
     SearchWikipediaResponse,
     SectionSummaryResponse,
     SectionsResponse,
     SummaryResponse,
+    TablesResponse,
     model_output_schema,
 )
 from wikipedia_mcp.wikipedia_client import WikipediaClient
@@ -362,6 +365,79 @@ def create_server(
         coordinates = wikipedia_client.get_coordinates(title)
         return coordinates
 
+    @register_tool("get_tables", model_output_schema(TablesResponse))
+    def get_tables(
+        title: str,
+        include_all_tables: Annotated[bool, Field(title="Include All Tables")] = False,
+    ):
+        """
+        Extract tables from a Wikipedia article.
+
+        Returns a dictionary with the article title and a list of tables, each
+        with a caption, column headers, and data rows. By default only data
+        tables (wikitables) are returned; set include_all_tables to True to also
+        include infoboxes, navboxes, and other tables.
+        """
+        logger.info("Tool: Getting tables for: %s (include_all_tables=%s)", title, include_all_tables)
+        return wikipedia_client.get_tables(title, include_all_tables=include_all_tables)
+
+    @register_tool("list_tables", model_output_schema(ListTablesResponse))
+    def list_tables(
+        title: str,
+        include_all_tables: Annotated[bool, Field(title="Include All Tables")] = False,
+    ):
+        """
+        List the tables in a Wikipedia article without their full contents.
+
+        Returns lightweight metadata for each table (index, caption, the article
+        section it appears under, headers, row_count, and column_count) so you can
+        pick one to fetch in detail with get_table. Use row_count to see how many
+        entries a table has; section is "" for tables in the lead/intro. By default
+        only data tables (wikitables) are listed; set include_all_tables to True
+        to also include infoboxes and other tables.
+        """
+        logger.info("Tool: Listing tables for: %s (include_all_tables=%s)", title, include_all_tables)
+        return wikipedia_client.list_tables(title, include_all_tables=include_all_tables)
+
+    @register_tool("get_table", model_output_schema(GetTableResponse))
+    def get_table(
+        title: str,
+        table_index: int = 0,
+        row: int = -1,
+        column: Annotated[str, Field(title="Column")] = "",
+        include_all_tables: Annotated[bool, Field(title="Include All Tables")] = False,
+    ):
+        """
+        Fetch a single Wikipedia table, or a specific row/column/cell within it.
+
+        Parameters:
+            title: The article title.
+            table_index: Which table to fetch (0-based; see list_tables).
+            row: A 0-based data-row index. If >= 0, only that row is returned.
+            column: A column reference — either a 0-based index (as a string,
+                e.g. "2") or a header name (case-insensitive). If set, only that
+                column is returned.
+            include_all_tables: If True, index into all tables including
+                infoboxes/navboxes rather than just data tables.
+
+        With neither row nor column, the whole table is returned. Supplying both
+        returns a single cell.
+        """
+        logger.info(
+            "Tool: Getting table %d for: %s (row=%d, column=%r)",
+            table_index,
+            title,
+            row,
+            column,
+        )
+        return wikipedia_client.get_table(
+            title,
+            table_index=table_index,
+            row=row,
+            column=column,
+            include_all_tables=include_all_tables,
+        )
+
     @server.resource("/search/{query}")
     def search(query: str):
         """
@@ -467,5 +543,29 @@ def create_server(
         logger.info("Getting coordinates for: %s", title)
         coordinates_data = wikipedia_client.get_coordinates(title)
         return coordinates_data
+
+    @server.resource("/tables/{title}")
+    def tables_resource(title: str):
+        """
+        HTTP resource to fetch tables via GET /tables/{title}.
+        """
+        logger.info("Getting tables for: %s", title)
+        return wikipedia_client.get_tables(title)
+
+    @server.resource("/tables/{title}/list")
+    def list_tables_resource(title: str):
+        """
+        HTTP resource to list tables via GET /tables/{title}/list.
+        """
+        logger.info("Listing tables for: %s", title)
+        return wikipedia_client.list_tables(title)
+
+    @server.resource("/tables/{title}/index/{table_index}")
+    def table_resource(title: str, table_index: int):
+        """
+        HTTP resource to fetch a single table via GET /tables/{title}/index/{table_index}.
+        """
+        logger.info("Getting table %d for: %s", table_index, title)
+        return wikipedia_client.get_table(title, table_index=table_index)
 
     return server

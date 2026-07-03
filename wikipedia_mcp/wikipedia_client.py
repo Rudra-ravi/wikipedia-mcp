@@ -8,14 +8,224 @@ supports optional caching and authentication via personal access tokens.
 """
 
 import logging
+import re
 import wikipediaapi
 import requests
+from html.parser import HTMLParser
 from typing import Dict, List, Optional, Any
 import functools
 import time
 from wikipedia_mcp import __version__
 
 logger = logging.getLogger(__name__)
+
+# Bounds to keep table extraction responses reasonably sized for LLM consumption.
+_MAX_TABLES = 50
+_MAX_ROWS_PER_TABLE = 400
+_MAX_CELLS_PER_ROW = 60
+_MAX_CELL_CHARS = 2000
+
+# Reference/citation markers that add noise to extracted cell text, e.g. "[1]",
+# "[12]", "[a]", "[note 3]", "[nb 1]", "[edit]", "[citation needed]".
+_REFERENCE_MARKER_RE = re.compile(
+    r"\[(?:\d+|[a-z]{1,3}|edit|(?:note|nb) \d+|citation needed)\]",
+    re.IGNORECASE,
+)
+
+
+class _WikiTableParser(HTMLParser):
+    """Extract HTML tables into structured rows of cells.
+
+    Handles nested tables (each ``<table>`` becomes a separate result),
+    ``colspan``/``rowspan`` expansion, and light cleanup of citation markers.
+    Cells are captured as ``(text, is_header)`` tuples so callers can split
+    header rows from data rows.
+    """
+
+    _HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        # Completed tables, in the order their </table> is seen.
+        self.tables: List[Dict[str, Any]] = []
+        # Stack of tables currently open (to support nesting).
+        self._stack: List[Dict[str, Any]] = []
+        # Text of the most recent section heading seen at the document level;
+        # "" means the lead/introduction (before any heading).
+        self._current_section: str = ""
+        self._in_heading: bool = False
+        self._heading_parts: List[str] = []
+
+    def _new_table(self, attrs: Dict[str, str]) -> Dict[str, Any]:
+        return {
+            "class": attrs.get("class", ""),
+            "caption": "",
+            "rows": [],  # list of rows; each row is list of (text, is_header)
+            "_row": None,  # current row being built
+            "_cell_parts": None,  # text fragments for the current cell
+            "_cell_is_header": False,
+            "_cell_colspan": 1,
+            "_cell_rowspan": 1,
+            "_in_caption": False,
+            # Pending rowspans keyed by column index -> [text, is_header, rows_remaining]
+            "_pending_rowspans": {},
+            "_col_cursor": 0,
+        }
+
+    @staticmethod
+    def _to_int(value: Optional[str], default: int = 1) -> int:
+        try:
+            parsed = int(str(value).strip())
+            return parsed if parsed > 0 else default
+        except (TypeError, ValueError):
+            return default
+
+    def handle_starttag(self, tag, attrs):
+        attr_dict = {k: (v or "") for k, v in attrs}
+
+        # Track section headings at the document level (outside any table) so
+        # each table can be attributed to the section it appears under.
+        if tag in self._HEADING_TAGS and not self._stack:
+            self._in_heading = True
+            self._heading_parts = []
+            return
+
+        if tag == "table":
+            table = self._new_table(attr_dict)
+            table["section"] = self._current_section
+            self._stack.append(table)
+            return
+
+        if not self._stack:
+            return
+
+        table = self._stack[-1]
+
+        if tag == "caption":
+            table["_in_caption"] = True
+        elif tag == "tr":
+            table["_row"] = []
+            table["_col_cursor"] = 0
+            self._fill_pending_rowspans(table)
+        elif tag in ("td", "th"):
+            if table["_row"] is None:
+                # Cell outside an explicit <tr>; start an implicit row.
+                table["_row"] = []
+                table["_col_cursor"] = 0
+                self._fill_pending_rowspans(table)
+            table["_cell_parts"] = []
+            table["_cell_is_header"] = tag == "th"
+            table["_cell_colspan"] = min(self._to_int(attr_dict.get("colspan")), _MAX_CELLS_PER_ROW)
+            table["_cell_rowspan"] = self._to_int(attr_dict.get("rowspan"))
+        elif tag in ("br", "p", "li"):
+            if table["_cell_parts"] is not None:
+                table["_cell_parts"].append(" ")
+
+    def handle_endtag(self, tag):
+        if tag in self._HEADING_TAGS and self._in_heading and not self._stack:
+            self._in_heading = False
+            self._current_section = self._clean_text("".join(self._heading_parts))
+            self._heading_parts = []
+            return
+
+        if tag == "table":
+            if self._stack:
+                self.tables.append(self._finalize_table(self._stack.pop()))
+            return
+
+        if not self._stack:
+            return
+
+        table = self._stack[-1]
+
+        if tag == "caption":
+            table["_in_caption"] = False
+        elif tag in ("td", "th"):
+            self._close_cell(table)
+        elif tag == "tr":
+            self._close_row(table)
+
+    def handle_data(self, data):
+        if self._in_heading and not self._stack:
+            self._heading_parts.append(data)
+            return
+        if not self._stack:
+            return
+        table = self._stack[-1]
+        if table["_in_caption"]:
+            table["caption"] += data
+        elif table["_cell_parts"] is not None:
+            table["_cell_parts"].append(data)
+
+    # -- helpers -------------------------------------------------------
+    def _fill_pending_rowspans(self, table: Dict[str, Any]) -> None:
+        """Insert carried-over rowspan cells at the front of a new row."""
+        pending = table["_pending_rowspans"]
+        cursor = table["_col_cursor"]
+        while cursor in pending and len(table["_row"]) < _MAX_CELLS_PER_ROW:
+            text, is_header, remaining = pending[cursor]
+            table["_row"].append((text, is_header))
+            remaining -= 1
+            if remaining <= 0:
+                del pending[cursor]
+            else:
+                pending[cursor] = [text, is_header, remaining]
+            cursor += 1
+        table["_col_cursor"] = cursor
+
+    def _close_cell(self, table: Dict[str, Any]) -> None:
+        if table["_cell_parts"] is None:
+            return
+        text = self._clean_text("".join(table["_cell_parts"]))
+        is_header = table["_cell_is_header"]
+        colspan = table["_cell_colspan"]
+        rowspan = table["_cell_rowspan"]
+
+        for _ in range(colspan):
+            if len(table["_row"]) >= _MAX_CELLS_PER_ROW:
+                break
+            table["_row"].append((text, is_header))
+            if rowspan > 1:
+                table["_pending_rowspans"][table["_col_cursor"]] = [text, is_header, rowspan - 1]
+            table["_col_cursor"] += 1
+            # Skip over any columns already claimed by earlier rowspans.
+            self._fill_pending_rowspans(table)
+
+        table["_cell_parts"] = None
+        table["_cell_is_header"] = False
+        table["_cell_colspan"] = 1
+        table["_cell_rowspan"] = 1
+
+    def _close_row(self, table: Dict[str, Any]) -> None:
+        if table["_row"] is None:
+            return
+        # Flush trailing rowspan carry-overs for this row.
+        self._fill_pending_rowspans(table)
+        if table["_row"] and len(table["rows"]) < _MAX_ROWS_PER_TABLE:
+            table["rows"].append(table["_row"])
+        table["_row"] = None
+        table["_col_cursor"] = 0
+
+    @staticmethod
+    def _clean_text(text: str) -> str:
+        text = _REFERENCE_MARKER_RE.sub("", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        if len(text) > _MAX_CELL_CHARS:
+            text = text[:_MAX_CELL_CHARS] + "..."
+        return text
+
+    def _finalize_table(self, table: Dict[str, Any]) -> Dict[str, Any]:
+        # A cell/row may still be open if the HTML omitted closing tags.
+        if table["_cell_parts"] is not None:
+            self._close_cell(table)
+        if table["_row"] is not None:
+            self._close_row(table)
+        return {
+            "class": table["class"],
+            "caption": self._clean_text(table["caption"]),
+            "section": table.get("section", ""),
+            "rows": table["rows"],
+        }
 
 
 class WikipediaClient:
@@ -328,6 +538,9 @@ class WikipediaClient:
             )
             self.extract_facts = functools.lru_cache(maxsize=128)(self.extract_facts)  # type: ignore[method-assign]
             self.get_coordinates = functools.lru_cache(maxsize=128)(self.get_coordinates)  # type: ignore[method-assign]
+            self.get_tables = functools.lru_cache(maxsize=128)(self.get_tables)  # type: ignore[method-assign]
+            self.list_tables = functools.lru_cache(maxsize=128)(self.list_tables)  # type: ignore[method-assign]
+            self.get_table = functools.lru_cache(maxsize=128)(self.get_table)  # type: ignore[method-assign]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -1153,3 +1366,355 @@ class WikipediaClient:
                 "exists": False,
                 "error": str(e),
             }
+
+    # ------------------------------------------------------------------
+    # Tables
+    # ------------------------------------------------------------------
+    def get_tables(self, title: str, include_all_tables: bool = False) -> Dict[str, Any]:
+        """
+        Extract tabular data from a Wikipedia article.
+
+        Fetches the rendered HTML of the article via the MediaWiki parse API and
+        extracts tables into structured rows. By default only data tables
+        (``class="wikitable"``) are returned; set ``include_all_tables`` to True
+        to also return infoboxes, navboxes, and other tables.
+
+        Args:
+            title: The title of the Wikipedia article.
+            include_all_tables: If True, return every table found; otherwise only
+                tables whose class contains "wikitable".
+
+        Returns:
+            A dictionary with the article title, existence flag, and a list of
+            tables. Each table has an ``index``, ``caption``, list of ``headers``
+            (column headers extracted from header rows), and ``rows`` (data rows
+            as lists of cell strings).
+        """
+        params = {
+            "action": "parse",
+            "format": "json",
+            "page": title,
+            "prop": "text",
+            "redirects": 1,
+            "formatversion": 2,
+        }
+        params = self._add_variant_to_params(params)
+
+        try:
+            data, error = self._request_json(
+                url=self.api_url,
+                params=params,
+                timeout=30,
+                retries=2,
+            )
+            if error:
+                return {
+                    "title": title,
+                    "exists": False,
+                    "tables": [],
+                    "error": error.get("message", "Failed to fetch tables"),
+                }
+
+            data = data or {}
+            if "error" in data:
+                error_info = data["error"]
+                message = error_info.get("info", "Page does not exist")
+                # MediaWiki returns "missingtitle" when the page does not exist.
+                exists = error_info.get("code") != "missingtitle"
+                return {
+                    "title": title,
+                    "exists": exists,
+                    "tables": [],
+                    "error": message,
+                }
+
+            parse_result = data.get("parse", {})
+            html_text = parse_result.get("text", "")
+            # formatversion=1 nests the HTML under a "*" key.
+            if isinstance(html_text, dict):
+                html_text = html_text.get("*", "")
+
+            if not html_text:
+                return {
+                    "title": parse_result.get("title", title),
+                    "exists": True,
+                    "tables": [],
+                    "message": "No tables found in this article.",
+                }
+
+            parser = _WikiTableParser()
+            parser.feed(html_text)
+
+            tables: List[Dict[str, Any]] = []
+            for raw_table in parser.tables:
+                if len(tables) >= _MAX_TABLES:
+                    break
+                if not include_all_tables and "wikitable" not in (raw_table.get("class") or ""):
+                    continue
+
+                rows = raw_table.get("rows", [])
+                if not rows:
+                    continue
+
+                headers, data_rows = self._split_table_rows(rows)
+                tables.append(
+                    {
+                        "index": len(tables),
+                        "caption": raw_table.get("caption", ""),
+                        "section": raw_table.get("section", ""),
+                        "headers": headers,
+                        "rows": data_rows,
+                    }
+                )
+
+            response: Dict[str, Any] = {
+                "title": parse_result.get("title", title),
+                "exists": True,
+                "tables": tables,
+            }
+            if not tables:
+                response["message"] = (
+                    "No tables found in this article."
+                    if include_all_tables
+                    else "No data tables found. Try include_all_tables=true to include infoboxes and other tables."
+                )
+            return response
+
+        except Exception as e:
+            logger.error(f"Error getting tables for Wikipedia article '{title}': {e}")
+            return {
+                "title": title,
+                "exists": False,
+                "tables": [],
+                "error": str(e),
+            }
+
+    @staticmethod
+    def _split_table_rows(rows: List[List[tuple]]) -> tuple[List[str], List[List[str]]]:
+        """Split parsed rows into a header list and data rows.
+
+        The first row that contains any header cell is treated as the column
+        headers; every other row is returned as a list of cell strings.
+        """
+        headers: List[str] = []
+        data_rows: List[List[str]] = []
+        header_taken = False
+
+        for row in rows:
+            is_header_row = bool(row) and all(is_header for _, is_header in row)
+            if is_header_row and not header_taken:
+                headers = [text for text, _ in row]
+                header_taken = True
+            else:
+                data_rows.append([text for text, _ in row])
+
+        return headers, data_rows
+
+    @staticmethod
+    def _table_column_count(headers: List[str], rows: List[List[str]]) -> int:
+        """Return the widest column count across headers and data rows."""
+        widest = len(headers)
+        for row in rows:
+            if len(row) > widest:
+                widest = len(row)
+        return widest
+
+    @staticmethod
+    def _resolve_column_index(column: str, headers: List[str], column_count: int) -> Optional[int]:
+        """Resolve a column reference (numeric string or header name) to an index."""
+        column = column.strip()
+        if not column:
+            return None
+
+        # Numeric reference, e.g. "0", "3".
+        if column.lstrip("-").isdigit():
+            index = int(column)
+            if 0 <= index < column_count:
+                return index
+            return None
+
+        # Header name reference (case-insensitive).
+        for idx, header in enumerate(headers):
+            if header.strip().lower() == column.lower():
+                return idx
+        return None
+
+    def list_tables(self, title: str, include_all_tables: bool = False) -> Dict[str, Any]:
+        """
+        List the tables in a Wikipedia article without their full contents.
+
+        Returns lightweight metadata for each table (index, caption, the article
+        section it appears under, headers, row count, and column count) so callers
+        can decide which table to fetch in detail via :meth:`get_table`. The
+        ``section`` is an empty string for tables in the lead/introduction.
+
+        Args:
+            title: The title of the Wikipedia article.
+            include_all_tables: If True, include infoboxes/navboxes as well.
+
+        Returns:
+            A dictionary with the article title, existence flag, table count,
+            and a list of per-table summaries.
+        """
+        data = self.get_tables(title, include_all_tables=include_all_tables)
+        if not data.get("exists"):
+            return {
+                "title": data.get("title", title),
+                "exists": False,
+                "count": 0,
+                "tables": [],
+                "error": data.get("error"),
+            }
+
+        summaries = []
+        for table in data.get("tables", []):
+            headers = table.get("headers", [])
+            rows = table.get("rows", [])
+            summaries.append(
+                {
+                    "index": table.get("index"),
+                    "caption": table.get("caption", ""),
+                    "section": table.get("section", ""),
+                    "headers": headers,
+                    "row_count": len(rows),
+                    "column_count": self._table_column_count(headers, rows),
+                }
+            )
+
+        response: Dict[str, Any] = {
+            "title": data.get("title", title),
+            "exists": True,
+            "count": len(summaries),
+            "tables": summaries,
+        }
+        if not summaries:
+            response["message"] = data.get("message", "No tables found in this article.")
+        return response
+
+    def get_table(
+        self,
+        title: str,
+        table_index: int = 0,
+        row: int = -1,
+        column: str = "",
+        include_all_tables: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Fetch a single table, or a specific row/column/cell within it.
+
+        Args:
+            title: The title of the Wikipedia article.
+            table_index: Which table to fetch (0-based; see :meth:`list_tables`).
+            row: A 0-based data-row index. If >= 0, only that row is returned.
+            column: A column reference — either a 0-based index (as a string,
+                e.g. "2") or a header name (case-insensitive). If provided, only
+                that column is returned.
+            include_all_tables: If True, index into all tables including
+                infoboxes/navboxes rather than just data tables.
+
+        Returns:
+            A dictionary containing the whole table, a single row, a single
+            column, or a single cell depending on which of ``row``/``column``
+            are supplied. On failure an ``error`` field is included.
+        """
+        data = self.get_tables(title, include_all_tables=include_all_tables)
+        if not data.get("exists"):
+            return {
+                "title": data.get("title", title),
+                "exists": False,
+                "error": data.get("error", "Page does not exist"),
+            }
+
+        tables = data.get("tables", [])
+        if not tables:
+            return {
+                "title": data.get("title", title),
+                "exists": True,
+                "error": data.get("message", "No tables found in this article."),
+            }
+
+        if table_index < 0 or table_index >= len(tables):
+            return {
+                "title": data.get("title", title),
+                "exists": True,
+                "error": f"Table index {table_index} out of range; article has {len(tables)} table(s).",
+            }
+
+        table = tables[table_index]
+        headers = table.get("headers", [])
+        rows = table.get("rows", [])
+        column_count = self._table_column_count(headers, rows)
+        resolved_title = data.get("title", title)
+
+        # Resolve an optional column reference up front.
+        column_index: Optional[int] = None
+        if column and column.strip():
+            column_index = self._resolve_column_index(column, headers, column_count)
+            if column_index is None:
+                return {
+                    "title": resolved_title,
+                    "exists": True,
+                    "table_index": table_index,
+                    "error": f"Column '{column}' not found in table {table_index}.",
+                }
+
+        row_index: Optional[int] = row if row >= 0 else None
+        if row_index is not None and row_index >= len(rows):
+            return {
+                "title": resolved_title,
+                "exists": True,
+                "table_index": table_index,
+                "error": f"Row index {row_index} out of range; table {table_index} has {len(rows)} row(s).",
+            }
+
+        header_name = headers[column_index] if column_index is not None and column_index < len(headers) else None
+
+        def cell(r: List[str], idx: int) -> str:
+            return r[idx] if 0 <= idx < len(r) else ""
+
+        # Single cell: both row and column specified.
+        if row_index is not None and column_index is not None:
+            return {
+                "title": resolved_title,
+                "exists": True,
+                "table_index": table_index,
+                "row_index": row_index,
+                "column_index": column_index,
+                "header": header_name,
+                "value": cell(rows[row_index], column_index),
+            }
+
+        # Single row.
+        if row_index is not None:
+            return {
+                "title": resolved_title,
+                "exists": True,
+                "table_index": table_index,
+                "row_index": row_index,
+                "headers": headers,
+                "row": rows[row_index],
+            }
+
+        # Single column.
+        if column_index is not None:
+            return {
+                "title": resolved_title,
+                "exists": True,
+                "table_index": table_index,
+                "column_index": column_index,
+                "header": header_name,
+                "values": [cell(r, column_index) for r in rows],
+            }
+
+        # Whole table.
+        return {
+            "title": resolved_title,
+            "exists": True,
+            "table_index": table_index,
+            "caption": table.get("caption", ""),
+            "section": table.get("section", ""),
+            "headers": headers,
+            "rows": rows,
+            "row_count": len(rows),
+            "column_count": column_count,
+        }

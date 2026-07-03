@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Table extraction tools: `get_tables` (all data tables in an article), `list_tables` (table metadata with row/column counts and the article section each table appears under), and `get_table` (a whole table or an individual row/column/cell). Tables are parsed from the article's rendered HTML with `colspan`/`rowspan` expansion and citation-marker cleanup. Also exposed as `tables/{title}`, `tables/{title}/list`, and `tables/{title}/index/{table_index}` MCP resources and `wikipedia_*` aliases.
+
 ## [2.0.1] - 2026-05-01
 
 ### Added
