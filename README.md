@@ -1,5 +1,7 @@
 # Wikipedia MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2FRudra-ravi%2Fwikipedia-mcp.svg)](https://mcptoplist.com/server/glama%2FRudra-ravi%2Fwikipedia-mcp)
+
 [![smithery badge](https://smithery.ai/badge/@Rudra-ravi/wikipedia-mcp)](https://smithery.ai/server/@Rudra-ravi/wikipedia-mcp)
 [![Listed on Spark](https://img.shields.io/badge/Listed%20on-Spark-blue)](https://spark.entire.vc/assets/vb-wikipedia-mcp)
 [![AgentSeal MCP](https://agentseal.org/api/v1/mcp/wikipedia-mcp/badge)](https://agentseal.org/mcp/wikipedia-mcp)
