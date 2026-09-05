@@ -1,6 +1,6 @@
 # Wikipedia MCP Server
 
-[![smithery badge](https://smithery.ai/badge/@Rudra-ravi/wikipedia-mcp)](https://smithery.ai/server/@Rudra-ravi/wikipedia-mcp)
+[![LightNow capabilities](https://lightnow.ai/badge/io.github.Rudra-ravi/wikipedia-mcp)](https://lightnow.ai/servers/io.github.Rudra-ravi/wikipedia-mcp)
 [![Listed on Spark](https://img.shields.io/badge/Listed%20on-Spark-blue)](https://spark.entire.vc/assets/vb-wikipedia-mcp)
 [![AgentSeal MCP](https://agentseal.org/api/v1/mcp/wikipedia-mcp/badge)](https://agentseal.org/mcp/wikipedia-mcp)
 
