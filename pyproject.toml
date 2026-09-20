@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wikipedia-mcp"
-version = "2.0.1"
+version = "2.1.0"
 authors = [
     {name = "Ravi Kumar E", email = "ravikumar@ravikumar-dev.me"},
 ]
@@ -53,7 +53,7 @@ dev = [
 packages.find.where = ["."]
 packages.find.include = ["wikipedia_mcp*"]
 package-data.wikipedia_mcp = ["py.typed"]
-license-files = ["LICENSE"] 
+license-files = ["LICENSE"]
 
 [tool.black]
 line-length = 120

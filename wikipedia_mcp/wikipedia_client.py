@@ -302,11 +302,15 @@ class WikipediaClient:
         # Parse language and variant
         self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
 
-        # Use base language for API and library initialization
+        # Use base language for API and library initialization, with access token
+        wiki_headers = {}
+        if self.access_token:
+            wiki_headers["Authorization"] = f"Bearer {self.access_token}"
         self.wiki = wikipediaapi.Wikipedia(
             user_agent=self.user_agent,
             language=self.base_language,
             extract_format=wikipediaapi.ExtractFormat.WIKI,
+            headers=wiki_headers or None
         )
         self.api_url = f"https://{self.base_language}.wikipedia.org/w/api.php"
 
