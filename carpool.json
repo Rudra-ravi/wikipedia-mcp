@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grollat/carpool/main/schema/carpool.schema.json",
+  "specVersion": "1",
+  "isolation": "shared",
+  "reason": "The Wikipedia client is configured once at startup and its optional LRU cache only holds public data. A .env file is loaded from the working directory, so only sessions in the same directory share a process.",
+  "partition": {
+    "env": [
+      "WIKIPEDIA_*"
+    ],
+    "cwd": true
+  },
+  "scaling": {
+    "maxConcurrentRequests": 8,
+    "maxInstances": 4
+  }
+}
