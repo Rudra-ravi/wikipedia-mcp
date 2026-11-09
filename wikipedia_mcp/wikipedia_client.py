@@ -8,6 +8,7 @@ supports optional caching and authentication via personal access tokens.
 """
 
 import logging
+import os
 import wikipediaapi
 import requests
 from typing import Dict, List, Optional, Any
@@ -297,7 +298,11 @@ class WikipediaClient:
 
         self.enable_cache = enable_cache
         self.access_token = access_token
-        self.user_agent = f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
+        # Wikimedia asks API clients to identify themselves with contact info and
+        # throttles generic user agents; allow operators to override the default.
+        self.user_agent = os.getenv("WIKIPEDIA_USER_AGENT") or (
+            f"WikipediaMCPServer/{__version__} (https://github.com/rudra-ravi/wikipedia-mcp)"
+        )
 
         # Parse language and variant
         self.base_language, self.language_variant = self._parse_language_variant(self.resolved_language)
