@@ -130,6 +130,7 @@ def create_server(
     auth_audience: Optional[str] = None,
     auth_algorithm: Optional[str] = None,
     auth_required_scopes: Optional[list[str]] = None,
+    tool_aliases: bool = True,
 ) -> FastMCP:
     """Create and configure the Wikipedia MCP server."""
 
@@ -165,12 +166,13 @@ def create_server(
                 annotations=_READ_ONLY_TOOL_ANNOTATIONS,
                 output_schema=output_schema,
             )
-            server.tool(
-                func,
-                name=f"wikipedia_{name}",
-                annotations=_READ_ONLY_TOOL_ANNOTATIONS,
-                output_schema=output_schema,
-            )
+            if tool_aliases:
+                server.tool(
+                    func,
+                    name=f"wikipedia_{name}",
+                    annotations=_READ_ONLY_TOOL_ANNOTATIONS,
+                    output_schema=output_schema,
+                )
             return func
 
         return decorator

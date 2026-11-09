@@ -275,7 +275,7 @@ To find the full path, run: `which wikipedia-mcp`
 
 The Wikipedia MCP server provides the following tools for LLMs to interact with Wikipedia:
 
-Each tool is also exposed with a `wikipedia_`-prefixed alias (for example, `wikipedia_get_article`) for improved cross-server discoverability.
+Each tool is also exposed with a `wikipedia_`-prefixed alias (for example, `wikipedia_get_article`) for improved cross-server discoverability. Pass `--no-tool-aliases` (or set `WIKIPEDIA_TOOL_ALIASES=false`) to expose only the unprefixed names, which halves the tool count for clients with small tool budgets.
 
 ### `search_wikipedia`
 
