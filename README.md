@@ -31,6 +31,7 @@ The Wikipedia MCP server provides real-time access to Wikipedia information thro
 - **Multi-language Support**: Access Wikipedia in different languages by specifying the `--language` or `-l` argument when running the server (e.g., `wikipedia-mcp --language ta` for Tamil).
 - **Country/Locale Support**: Use intuitive country codes like `--country US`, `--country China`, or `--country TW` instead of language codes. Automatically maps to appropriate Wikipedia language variants.
 - **Language Variant Support**: Support for language variants such as Chinese traditional/simplified (e.g., `zh-hans` for Simplified Chinese, `zh-tw` for Traditional Chinese), Serbian scripts (`sr-latn`, `sr-cyrl`), and other regional variants.
+- **Custom User-Agent**: Set `WIKIPEDIA_USER_AGENT` (e.g. `my-app/1.0 (me@example.com)`) to identify your deployment, as Wikimedia's API policy requests; busy shared IPs using the generic default may be rate limited (HTTP 429)
 - **Optional caching**: Cache API responses for improved performance using --enable-cache
 - **Modern MCP Transport Support**: Supports `stdio`, `http`, and `streamable-http` (with legacy `sse` compatibility).
 - **Optional MCP Transport Auth**: Secure network transports with `--auth-mode static` or `--auth-mode jwt`.
