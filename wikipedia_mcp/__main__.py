@@ -121,6 +121,15 @@ def main() -> None:
         help="Enable caching for Wikipedia API calls (optional)",
     )
     parser.add_argument(
+        "--no-tool-aliases",
+        action="store_true",
+        help=(
+            "Do not register the wikipedia_-prefixed alias for each tool. "
+            "Halves the tool count exposed to clients. "
+            "Can also be set with WIKIPEDIA_TOOL_ALIASES=false."
+        ),
+    )
+    parser.add_argument(
         "--access-token",
         type=str,
         help=("Access token for Wikipedia API (optional). " "Can also be set via WIKIPEDIA_ACCESS_TOKEN."),
@@ -242,6 +251,9 @@ def main() -> None:
         parser.error(str(exc))
 
     access_token = args.access_token or os.getenv("WIKIPEDIA_ACCESS_TOKEN")
+    tool_aliases = not (
+        args.no_tool_aliases or os.getenv("WIKIPEDIA_TOOL_ALIASES", "true").strip().lower() in ("0", "false", "no", "off")
+    )
 
     try:
         server = create_server(
@@ -250,6 +262,7 @@ def main() -> None:
             enable_cache=args.enable_cache,
             access_token=access_token,
             auth_config=auth_config,
+            tool_aliases=tool_aliases,
         )
     except ValueError as exc:
         logger.error("Configuration error: %s", exc)
